@@ -6,3 +6,7 @@ Baseline: Accuracy : 0.72
 Arcs : ResNet18, 34, 50
 
 Webcam: OpenCV
+
+Pytorch dataset class -> []
+Augmentations ->  []
+
