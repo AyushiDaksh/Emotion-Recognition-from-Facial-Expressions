@@ -1,7 +1,7 @@
 import torch
 from torchvision.datasets import VisionDataset
-from torchvision.transforms import v2 as transforms
 from torchvision.io import read_image, ImageReadMode
+from torch.utils.data import Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
@@ -14,16 +14,7 @@ class FER2013(VisionDataset):
         super().__init__(root, transform=transform, target_transform=target_transform)
         self.split = split
         self.paths = self._make_dataset_paths()
-
-        if not self.transform:
-            self.transform = transforms.Compose(
-                [
-                    transforms.Grayscale(num_output_channels=1),
-                    transforms.Resize((48, 48), antialias=True),
-                    transforms.ToImage(),
-                    transforms.ToDtype(torch.float32, scale=True),
-                ]
-            )
+        self.transform = transform
 
     def _make_dataset_paths(self):
         if not os.path.exists(self.root):
@@ -59,3 +50,31 @@ class FER2013(VisionDataset):
         plt.title(CLASSES[target])
         plt.axis("off")
         plt.show()
+
+
+class WrapperDataset(Dataset):
+    """
+    Dataset to wrap subsets of datasets and their transformations
+    This is needed to have different transformations for train and val subsets
+
+    Parameters
+    ----------
+    subset : torch.utils.data.Dataset
+        The dataset to use
+    transform : Function
+        The transformation pipeline. If None, no transformations are applied
+    """
+
+    def __init__(self, subset, *args, transform=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subset = subset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.subset)
+
+    def __getitem__(self, idx):
+        image, label = self.subset[idx]
+        if self.transform is not None:
+            image = self.transform(image)
+        return image, label
