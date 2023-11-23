@@ -12,7 +12,8 @@ import wandb
 
 from dataset import FER2013, WrapperDataset
 from constants import *
-from utils import set_seed
+from eval import evaluate
+from utils import get_device, set_seed
 
 # from eval import evaluate
 
@@ -61,7 +62,7 @@ def train(
     criterion,
     optimizer,
     epochs,
-    batch_size,
+    batch_size=64,
     device="cpu",
     log_interval=100,
 ):
@@ -118,7 +119,9 @@ def train(
             # Compute metrics for validation data after every few epochs
             if batch_num % log_interval == 0:
                 # TODO: Get validation data metrics
-                val_metrics = evaluate(model, val_loader, criterion, device=device)
+                val_metrics = evaluate(
+                    model, val_dataset, criterion, batch_size=batch_size, device=device
+                )
 
                 # Log in wandb
                 log_dict = {
@@ -140,7 +143,7 @@ def train(
                 # Log ROC curve for validation data
                 wandb.log(
                     {
-                        "roc": wandb.plot.roc_curve(
+                        "val/roc": wandb.plot.roc_curve(
                             val_metrics["ground_truth"],
                             torch.nn.functional.softmax(val_metrics["logits"], dim=-1),
                             labels=CLASSES,
@@ -212,14 +215,7 @@ if __name__ == "__main__":
             set_seed(run_config.seed)
 
         # Select device on the machine
-        if run_config.device == "cuda":
-            if torch.cuda.is_available():
-                device = run_config.device
-            else:
-                warn("Cuda not available, running on CPU")
-                device = "cpu"
-        else:
-            device = run_config.device
+        device = get_device(run_config.device)
 
         model = None  # TODO: Insert model object here based on model_name
 
