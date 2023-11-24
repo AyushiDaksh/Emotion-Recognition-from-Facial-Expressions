@@ -83,8 +83,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Wandb-specific params
-    parser.add_argument("--runid", type=str, help="ID of train run")
+    parser.add_argument("--runid", type=str, required=True, help="ID of train run")
     parser.add_argument("--project", type=str, default="emotion_recognition")
+    parser.add_argument("--entity", type=str, required=True)
 
     # Device to run on
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
@@ -92,7 +93,7 @@ if __name__ == "__main__":
 
     # Start wandb run
     with wandb.init(
-        entity="ayushidaksh",
+        entity=run_config.entity,
         project=run_config.project,
         id=run_config.runid,
         resume="must",

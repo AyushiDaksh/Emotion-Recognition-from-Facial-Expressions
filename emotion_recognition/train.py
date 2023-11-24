@@ -183,8 +183,9 @@ if __name__ == "__main__":
     # W&B related parameters
     parser.add_argument("--log_interval", type=int, default=100)
     parser.add_argument("--project", type=str, default="emotion_recognition")
+    parser.add_argument("--entity", type=str, required=True)
 
-    parser.add_argument("--model_name", type=str, default="vit_base_patch16_224")
+    parser.add_argument("--model_name", type=str, required=True)
 
     # Run-specific parameters
     parser.add_argument("--seed", type=int)
@@ -200,22 +201,26 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--dropout", type=float, default=0.4)
 
-    run_config = parser.parse_args()
+    # Parse the args and remove the non-hyperparameter keys
+    run_config = vars(parser.parse_args())
+    entity = run_config.pop("entity")
+    project = run_config.pop("project")
+    model_name = run_config.pop("model_name")
+    seed = run_config.pop("seed", None)
+    device = get_device(run_config.pop("device"))
+    log_interval = run_config.pop("log_interval")
 
     # Start wandb run
     with wandb.init(
-        entity="ayushidaksh",
-        project=run_config.project,
+        entity=entity,
+        project=project,
         config=run_config,
-        group=run_config.model_name,
-        job_type="emotion",
+        group=model_name,
+        job_type=None,
     ):
         # Set random seed
-        if run_config.seed:
-            set_seed(run_config.seed)
-
-        # Select device on the machine
-        device = get_device(run_config.device)
+        if seed:
+            set_seed(seed)
 
         model = None  # TODO: Insert model object here based on model_name
 
@@ -244,7 +249,7 @@ if __name__ == "__main__":
         val_dataset = WrapperDataset(val_dataset, transform=val_transform)
 
         # Initialize optimizer
-        optimizer = Adam(model.parameters(), lr=run_config.lr)
+        optimizer = Adam(model.parameters(), lr=run_config["lr"])
 
         # Loss function
         criterion = CrossEntropyLoss()  # TODO: Class weight here or upsample in batches
@@ -256,8 +261,8 @@ if __name__ == "__main__":
             val_dataset,
             criterion,
             optimizer,
-            run_config.epochs,
-            run_config.batchsize,
+            run_config["epochs"],
+            run_config["batchsize"],
             device,
-            run_config.log_interval,
+            log_interval,
         )
