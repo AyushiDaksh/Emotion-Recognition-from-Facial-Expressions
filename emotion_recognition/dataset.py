@@ -73,8 +73,11 @@ class WrapperDataset(Dataset):
     def __len__(self):
         return len(self.subset)
 
-    def __getitem__(self, idx):
-        image, label = self.subset[idx]
+    def __getitem__(self, index):
+        image, label = self.subset[index]
         if self.transform is not None:
             image = self.transform(image)
         return image, label
+
+    def display(self, index):
+        self.subset.dataset.display(self.subset.indices[index])
