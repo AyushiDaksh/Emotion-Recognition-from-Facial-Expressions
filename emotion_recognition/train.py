@@ -10,7 +10,7 @@ import argparse
 import os
 import wandb
 
-from dataset import FER2013, WrapperDataset
+from dataset import FER2013, WrapperDataset, get_balanced_sampler
 from constants import *
 from eval import evaluate
 from utils import get_device, set_seed
@@ -95,7 +95,10 @@ def train(
     """
     # Initialize data loaders for iterating mini-batches
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, drop_last=True
+        train_dataset,
+        batch_size=batch_size,
+        # To upsample minority classes, get weighted shuffled sampler
+        sampler=get_balanced_sampler(train_dataset),
     )
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
@@ -263,7 +266,7 @@ if __name__ == "__main__":
         optimizer = Adam(model.parameters(), lr=run_config["lr"])
 
         # Loss function
-        criterion = CrossEntropyLoss()  # TODO: Class weight here or upsample in batches
+        criterion = CrossEntropyLoss()
 
         # Train the model and get the best validation metrics
         best_val_metrics = train(

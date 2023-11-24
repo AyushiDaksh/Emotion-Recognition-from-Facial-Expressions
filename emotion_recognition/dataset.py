@@ -1,7 +1,7 @@
 import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_image, ImageReadMode
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, WeightedRandomSampler
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
@@ -81,3 +81,36 @@ class WrapperDataset(Dataset):
 
     def display(self, index):
         self.subset.dataset.display(self.subset.indices[index])
+
+
+def get_balanced_sampler(dataset: Dataset) -> WeightedRandomSampler:
+    """
+    Get a shuffled sampler where the probability of picking a class sample is
+    inversely proportional to its frequency
+
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+
+    Returns
+    -------
+    WeightedRandomSampler
+    """
+    num_classes = len(CLASSES)
+    # Count how many times each class appears in the dataset
+    class_counts = [0] * num_classes
+    for _, label in dataset:
+        class_counts[label] += 1
+
+    # Create weight for each class based on its frequency
+    weight_per_class = [
+        len(dataset) / (num_classes * class_counts[i]) for i in range(num_classes)
+    ]
+
+    # Assign a weight to each sample in the dataset
+    weights = [weight_per_class[label] for _, label in dataset]
+
+    # Create a WeightedRandomSampler object with these weights
+    sampler = WeightedRandomSampler(weights, len(weights), replacement=True)
+
+    return sampler
