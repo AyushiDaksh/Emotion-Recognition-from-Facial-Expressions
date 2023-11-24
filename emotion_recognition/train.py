@@ -189,10 +189,6 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int)
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
 
-    # Augmentations
-    parser.add_argument("--random_zoom", type=float, default=1)
-    parser.add_argument("--random_rotation", type=float, default=0)
-
     # Common hyperparameters
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
