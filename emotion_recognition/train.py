@@ -118,7 +118,6 @@ def train(
 
             # Compute metrics for validation data after every few epochs
             if batch_num % log_interval == 0:
-                # TODO: Get validation data metrics
                 val_metrics = evaluate(
                     model, val_dataset, criterion, batch_size=batch_size, device=device
                 )
@@ -230,7 +229,6 @@ if __name__ == "__main__":
                 transforms.Grayscale(num_output_channels=1),
                 transforms.Resize(IMG_SIZE, antialias=True),
                 transforms.ToImage(),
-                transforms.ToDtype(torch.float, scale=True),
             ]
         )
         dataset = FER2013(root=DEFAULT_DS_ROOT, split="train", transform=transform)
@@ -241,8 +239,21 @@ if __name__ == "__main__":
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
         # Define separate transforms for train and val
-        train_transform = None  # TODO: Do Standardization and Augmentation here
-        val_transform = None  # TODO: Do Standardization here
+        train_transform = [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ColorJitter(brightness=0.5, contrast=0.2),
+            transforms.RandomResizedCrop(
+                IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
+            ),
+            transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
+            transforms.RandomAffine(degrees=45, translate=(-0.4, 0.4)),
+            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+            transforms.ToDtype(torch.float, scale=True),
+        ]
+        val_transform = [
+            transforms.ToDtype(torch.float, scale=True),
+        ]  # TODO: Maybe weak augmentations here too?
 
         # Initialize train and validation datasets
         train_dataset = WrapperDataset(train_dataset, transform=train_transform)

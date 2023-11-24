@@ -113,10 +113,11 @@ if __name__ == "__main__":
                 transforms.Grayscale(num_output_channels=1),
                 transforms.Resize(IMG_SIZE, antialias=True),
                 transforms.ToImage(),
-                transforms.ToDtype(torch.float, scale=True),
             ]
         )
-        test_transform = None  # TODO: Do Standardization here
+        test_transform = [
+            transforms.ToDtype(torch.float, scale=True),
+        ]
         dataset = WrapperDataset(
             FER2013(root=DEFAULT_DS_ROOT, split="test", transform=transform),
             transform=test_transform,
