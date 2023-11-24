@@ -22,8 +22,3 @@ def get_device(device="cpu"):
             device = "cpu"
     else:
         device = device
-
-
-def get_model(model_name):
-    # TODO: Map model names to model classes
-    pass

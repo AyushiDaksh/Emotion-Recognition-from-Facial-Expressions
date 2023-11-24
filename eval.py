@@ -35,12 +35,12 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     -------
     dict
         Metrics on the provided data by the given model.
-        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "micro_auroc", "macro_auroc".
     """
     model.eval()  # Switch on evaluation model
 
     # Initialize lists for different metrics
-    loss, accuracy, class_auroc, macro_auroc = [], [], [], []
+    loss, accuracy, class_auroc, micro_auroc, macro_auroc = [], [], [], [], []
     logits, y = [], []
 
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
@@ -66,6 +66,7 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
         "logits": logits,
         "loss": np.mean(loss),
         "accuracy": np.mean(accuracy),
+        "micro_auroc": np.mean(micro_auroc),
         "macro_auroc": np.mean(macro_auroc),
     }
 
@@ -82,9 +83,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Wandb-specific params
-    parser.add_argument("--runid", type=str, required=True, help="ID of train run")
+    parser.add_argument("--runid", type=str, help="ID of train run")
     parser.add_argument("--project", type=str, default="emotion_recognition")
-    parser.add_argument("--entity", type=str, required=True)
 
     # Device to run on
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     # Start wandb run
     with wandb.init(
-        entity=run_config.entity,
+        entity="ayushidaksh",
         project=run_config.project,
         id=run_config.runid,
         resume="must",
@@ -112,11 +112,10 @@ if __name__ == "__main__":
                 transforms.Grayscale(num_output_channels=1),
                 transforms.Resize(IMG_SIZE, antialias=True),
                 transforms.ToImage(),
+                transforms.ToDtype(torch.float, scale=True),
             ]
         )
-        test_transform = [
-            transforms.ToDtype(torch.float, scale=True),
-        ]
+        test_transform = None  # TODO: Do Standardization here
         dataset = WrapperDataset(
             FER2013(root=DEFAULT_DS_ROOT, split="test", transform=transform),
             transform=test_transform,
@@ -133,6 +132,7 @@ if __name__ == "__main__":
         # Log the summary into W&B
         wandb.run.summary["test/loss"] = metrics["loss"]
         wandb.run.summary["test/accuracy"] = metrics["accuracy"]
+        wandb.run.summary["test/micro_auroc"] = metrics["micro_auroc"]
         wandb.run.summary["test/macro_auroc"] = metrics["macro_auroc"]
         for cls_name in CLASSES:
             wandb.run.summary[f"test/{cls_name}_auroc"] = metrics[f"{cls_name}_auroc"]
