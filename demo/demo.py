@@ -2,7 +2,6 @@ import cv2
 import time
 import psutil
 import GPUtil
-from deepface import DeepFace
 
 def get_resource_usage():
     cpu_usage = psutil.cpu_percent(interval=None)
