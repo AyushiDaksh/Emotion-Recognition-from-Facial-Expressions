@@ -13,7 +13,7 @@ import wandb
 from dataset import FER2013, WrapperDataset, get_balanced_sampler
 from constants import *
 from eval import evaluate
-from utils import get_device, set_seed
+from utils import get_device, get_model, set_seed
 
 # from eval import evaluate
 
@@ -216,7 +216,8 @@ if __name__ == "__main__":
         if seed:
             set_seed(seed)
 
-        model = None  # TODO: Insert model object here based on model_name
+        # Initialize model
+        model = get_model(model_name)
 
         # Initialize train dataset with the common transforms
         transform = transforms.Compose(
