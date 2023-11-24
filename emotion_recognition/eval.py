@@ -35,12 +35,12 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     -------
     dict
         Metrics on the provided data by the given model.
-        It is a dict containing metrics like "loss", "accuracy", "micro_auroc", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
     """
     model.eval()  # Switch on evaluation model
 
     # Initialize lists for different metrics
-    loss, accuracy, class_auroc, micro_auroc, macro_auroc = [], [], [], [], []
+    loss, accuracy, class_auroc, macro_auroc = [], [], [], []
     logits, y = [], []
 
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
@@ -66,7 +66,6 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
         "logits": logits,
         "loss": np.mean(loss),
         "accuracy": np.mean(accuracy),
-        "micro_auroc": np.mean(micro_auroc),
         "macro_auroc": np.mean(macro_auroc),
     }
 
@@ -134,7 +133,6 @@ if __name__ == "__main__":
         # Log the summary into W&B
         wandb.run.summary["test/loss"] = metrics["loss"]
         wandb.run.summary["test/accuracy"] = metrics["accuracy"]
-        wandb.run.summary["test/micro_auroc"] = metrics["micro_auroc"]
         wandb.run.summary["test/macro_auroc"] = metrics["macro_auroc"]
         for cls_name in CLASSES:
             wandb.run.summary[f"test/{cls_name}_auroc"] = metrics[f"{cls_name}_auroc"]

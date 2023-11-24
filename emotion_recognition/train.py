@@ -91,7 +91,7 @@ def train(
     -------
     dict
         Metrics on validation data from best model (based on val AUROC).
-        It is a dict containing metrics like "loss", "accuracy", "micro_auroc", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
     """
     # Initialize data loaders for iterating mini-batches
     train_loader = DataLoader(
@@ -132,7 +132,6 @@ def train(
                     "train/loss": train_loss,
                     "val/loss": val_metrics["loss"],
                     "val/accuracy": val_metrics["accuracy"],
-                    "val/micro_auroc": val_metrics["micro_auroc"],
                     "val/macro_auroc": val_metrics["macro_auroc"],
                 }
                 # Classwise validation AUROC
@@ -155,9 +154,6 @@ def train(
 
                 # Update best val auroc
                 if val_metrics["macro_auroc"] > best_val_metrics["macro_auroc"]:
-                    wandb.run.summary["best_val_micro_auroc"] = val_metrics[
-                        "micro_auroc"
-                    ]
                     wandb.run.summary["best_val_macro_auroc"] = val_metrics[
                         "macro_auroc"
                     ]
