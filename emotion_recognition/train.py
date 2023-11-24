@@ -10,10 +10,10 @@ import argparse
 import os
 import wandb
 
-from dataset import FER2013, WrapperDataset
+from dataset import FER2013, WrapperDataset, get_balanced_sampler
 from constants import *
 from eval import evaluate
-from utils import get_device, set_seed
+from utils import get_device, get_model, set_seed
 
 # from eval import evaluate
 
@@ -91,11 +91,14 @@ def train(
     -------
     dict
         Metrics on validation data from best model (based on val AUROC).
-        It is a dict containing metrics like "loss", "accuracy", "micro_auroc", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
     """
     # Initialize data loaders for iterating mini-batches
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, drop_last=True
+        train_dataset,
+        batch_size=batch_size,
+        # To upsample minority classes, get weighted shuffled sampler
+        sampler=get_balanced_sampler(train_dataset),
     )
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
@@ -118,7 +121,6 @@ def train(
 
             # Compute metrics for validation data after every few epochs
             if batch_num % log_interval == 0:
-                # TODO: Get validation data metrics
                 val_metrics = evaluate(
                     model, val_dataset, criterion, batch_size=batch_size, device=device
                 )
@@ -130,7 +132,6 @@ def train(
                     "train/loss": train_loss,
                     "val/loss": val_metrics["loss"],
                     "val/accuracy": val_metrics["accuracy"],
-                    "val/micro_auroc": val_metrics["micro_auroc"],
                     "val/macro_auroc": val_metrics["macro_auroc"],
                 }
                 # Classwise validation AUROC
@@ -153,9 +154,6 @@ def train(
 
                 # Update best val auroc
                 if val_metrics["macro_auroc"] > best_val_metrics["macro_auroc"]:
-                    wandb.run.summary["best_val_micro_auroc"] = val_metrics[
-                        "micro_auroc"
-                    ]
                     wandb.run.summary["best_val_macro_auroc"] = val_metrics[
                         "macro_auroc"
                     ]
@@ -183,16 +181,13 @@ if __name__ == "__main__":
     # W&B related parameters
     parser.add_argument("--log_interval", type=int, default=100)
     parser.add_argument("--project", type=str, default="emotion_recognition")
+    parser.add_argument("--entity", type=str, required=True)
 
-    parser.add_argument("--model_name", type=str, default="vit_base_patch16_224")
+    parser.add_argument("--model_name", type=str, required=True)
 
     # Run-specific parameters
     parser.add_argument("--seed", type=int)
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
-
-    # Augmentations
-    parser.add_argument("--random_zoom", type=float, default=1)
-    parser.add_argument("--random_rotation", type=float, default=0)
 
     # Common hyperparameters
     parser.add_argument("--epochs", type=int, default=25)
@@ -200,24 +195,29 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--dropout", type=float, default=0.4)
 
-    run_config = parser.parse_args()
+    # Parse the args and remove the non-hyperparameter keys
+    run_config = vars(parser.parse_args())
+    entity = run_config.pop("entity")
+    project = run_config.pop("project")
+    model_name = run_config.pop("model_name")
+    seed = run_config.pop("seed", None)
+    device = get_device(run_config.pop("device"))
+    log_interval = run_config.pop("log_interval")
 
     # Start wandb run
     with wandb.init(
-        entity="ayushidaksh",
-        project=run_config.project,
+        entity=entity,
+        project=project,
         config=run_config,
-        group=run_config.model_name,
-        job_type="emotion",
+        group=model_name,
+        job_type=None,
     ):
         # Set random seed
-        if run_config.seed:
-            set_seed(run_config.seed)
+        if seed:
+            set_seed(seed)
 
-        # Select device on the machine
-        device = get_device(run_config.device)
-
-        model = None  # TODO: Insert model object here based on model_name
+        # Initialize model
+        model = get_model(model_name)
 
         # Initialize train dataset with the common transforms
         transform = transforms.Compose(
@@ -225,7 +225,6 @@ if __name__ == "__main__":
                 transforms.Grayscale(num_output_channels=1),
                 transforms.Resize(IMG_SIZE, antialias=True),
                 transforms.ToImage(),
-                transforms.ToDtype(torch.float, scale=True),
             ]
         )
         dataset = FER2013(root=DEFAULT_DS_ROOT, split="train", transform=transform)
@@ -236,18 +235,31 @@ if __name__ == "__main__":
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
         # Define separate transforms for train and val
-        train_transform = None  # TODO: Do Standardization and Augmentation here
-        val_transform = None  # TODO: Do Standardization here
+        train_transform = [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ColorJitter(brightness=0.5, contrast=0.2),
+            transforms.RandomResizedCrop(
+                IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
+            ),
+            transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
+            transforms.RandomAffine(degrees=45, translate=(-0.4, 0.4)),
+            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+            transforms.ToDtype(torch.float, scale=True),
+        ]
+        val_transform = [
+            transforms.ToDtype(torch.float, scale=True),
+        ]  # TODO: Maybe weak augmentations here too?
 
         # Initialize train and validation datasets
         train_dataset = WrapperDataset(train_dataset, transform=train_transform)
         val_dataset = WrapperDataset(val_dataset, transform=val_transform)
 
         # Initialize optimizer
-        optimizer = Adam(model.parameters(), lr=run_config.lr)
+        optimizer = Adam(model.parameters(), lr=run_config["lr"])
 
         # Loss function
-        criterion = CrossEntropyLoss()  # TODO: Class weight here or upsample in batches
+        criterion = CrossEntropyLoss()
 
         # Train the model and get the best validation metrics
         best_val_metrics = train(
@@ -256,8 +268,8 @@ if __name__ == "__main__":
             val_dataset,
             criterion,
             optimizer,
-            run_config.epochs,
-            run_config.batchsize,
+            run_config["epochs"],
+            run_config["batchsize"],
             device,
-            run_config.log_interval,
+            log_interval,
         )
