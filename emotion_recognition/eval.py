@@ -57,9 +57,15 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     # Concatenate all results
     logits, y = torch.cat(logits), torch.cat(y)
     loss.append(loss_fn(logits, y))
-    accuracy.append(accuracy_fn(logits, y, num_classes=len(CLASSES)))
-    class_auroc.append(auroc_fn(logits, y, num_classes=len(CLASSES), average=None))
-    macro_auroc.append(auroc_fn(logits, y, num_classes=len(CLASSES), average="macro"))
+    accuracy.append(accuracy_fn(logits, y, task="multiclass", num_classes=len(CLASSES)))
+    class_auroc.append(
+        auroc_fn(logits, y, task="multiclass", num_classes=len(CLASSES), average=None)
+    )
+    macro_auroc.append(
+        auroc_fn(
+            logits, y, task="multiclass", num_classes=len(CLASSES), average="macro"
+        )
+    )
 
     result = {
         "ground_truth": y,
@@ -114,9 +120,11 @@ if __name__ == "__main__":
                 transforms.ToImage(),
             ]
         )
-        test_transform = [
-            transforms.ToDtype(torch.float, scale=True),
-        ]
+        test_transform = transforms.Compose(
+            [
+                transforms.ToDtype(torch.float, scale=True),
+            ]
+        )
         dataset = WrapperDataset(
             FER2013(root=DEFAULT_DS_ROOT, split="test", transform=transform),
             transform=test_transform,

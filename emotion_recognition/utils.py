@@ -3,7 +3,7 @@ import random
 import numpy as np
 from logging import warn
 
-from constants import MODEL_NAME_MAP
+from constants import CLASSES, MODEL_NAME_MAP
 
 
 def set_seed(seed):
@@ -27,4 +27,10 @@ def get_device(device="cpu"):
 
 
 def get_model(model_name):
-    return MODEL_NAME_MAP[model_name]()
+    model = MODEL_NAME_MAP[model_name](num_classes=len(CLASSES))
+    if "resnet" in model_name:
+        # Change the model to accept single channel images
+        model.conv1 = torch.nn.Conv2d(
+            1, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
+    return model

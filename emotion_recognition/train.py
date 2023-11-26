@@ -119,6 +119,9 @@ def train(
                 model, images, labels, optimizer, criterion, device=device
             )
 
+            # Log train loss in wandb
+            wandb.log({"train/loss": train_loss}, step=batch_num)
+
             # Compute metrics for validation data after every few epochs
             if batch_num % log_interval == 0:
                 val_metrics = evaluate(
@@ -129,7 +132,6 @@ def train(
                 log_dict = {
                     "epoch": epoch,
                     "batch_num": batch_num,
-                    "train/loss": train_loss,
                     "val/loss": val_metrics["loss"],
                     "val/accuracy": val_metrics["accuracy"],
                     "val/macro_auroc": val_metrics["macro_auroc"],
@@ -138,7 +140,7 @@ def train(
                 for cls_name in CLASSES:
                     log_dict[f"val/{cls_name}_auroc"] = val_metrics[f"{cls_name}_auroc"]
 
-                # Log metrics in wandb
+                # Log val metrics in wandb
                 wandb.log(log_dict, step=batch_num)
 
                 # Log ROC curve for validation data
@@ -238,21 +240,25 @@ if __name__ == "__main__":
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
         # Define separate transforms for train and val
-        train_transform = [
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.ColorJitter(brightness=0.5, contrast=0.2),
-            transforms.RandomResizedCrop(
-                IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
-            ),
-            transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
-            transforms.RandomAffine(degrees=45, translate=(-0.4, 0.4)),
-            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
-            transforms.ToDtype(torch.float, scale=True),
-        ]
-        val_transform = [
-            transforms.ToDtype(torch.float, scale=True),
-        ]  # TODO: Maybe weak augmentations here too?
+        train_transform = transforms.Compose(
+            [
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.ColorJitter(brightness=0.5, contrast=0.2),
+                transforms.RandomResizedCrop(
+                    IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
+                ),
+                transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
+                transforms.RandomAffine(degrees=45, translate=(0.4, 0.4)),
+                transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+                transforms.ToDtype(torch.float, scale=True),
+            ]
+        )
+        val_transform = transforms.Compose(
+            [
+                transforms.ToDtype(torch.float, scale=True),
+            ]
+        )  # TODO: Maybe weak augmentations here too?
 
         # Initialize train and validation datasets
         train_dataset = WrapperDataset(train_dataset, transform=train_transform)
