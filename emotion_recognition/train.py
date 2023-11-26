@@ -190,6 +190,9 @@ if __name__ == "__main__":
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
 
     # Common hyperparameters
+    parser.add_argument(
+        "--optim", type=str, choices=["sgd", "adam", "adamw"], default="adamw"
+    )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -256,7 +259,12 @@ if __name__ == "__main__":
         val_dataset = WrapperDataset(val_dataset, transform=val_transform)
 
         # Initialize optimizer
-        optimizer = Adam(model.parameters(), lr=run_config["lr"])
+        if run_config["optim"] == "adam":
+            optimizer = Adam(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adamw":
+            optimizer = AdamW(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "sgd":
+            optimizer = SGD(model.parameters(), lr=run_config["lr"])
 
         # Loss function
         criterion = CrossEntropyLoss()
