@@ -3,6 +3,8 @@ import random
 import numpy as np
 from logging import warn
 
+from constants import MODEL_NAME_MAP
+
 
 def set_seed(seed):
     torch.backends.cudnn.deterministic = True
@@ -25,5 +27,4 @@ def get_device(device="cpu"):
 
 
 def get_model(model_name):
-    # TODO: Map model names to model classes
-    pass
+    return MODEL_NAME_MAP[model_name]()

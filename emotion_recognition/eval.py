@@ -12,7 +12,7 @@ import os
 
 from dataset import FER2013, WrapperDataset
 from constants import *
-from utils import get_device
+from utils import get_device, get_model
 
 
 @torch.no_grad()
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         # Get best device on machine
         device = get_device(run_config.device)
 
-        model = None  # TODO: Insert model object here based on model_name
+        model = get_model(wandb.config.model_name)
 
         # Fetch weights from wandb train run
         weights_file = wandb.restore("best_model.pt")
