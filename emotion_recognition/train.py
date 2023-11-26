@@ -182,8 +182,8 @@ if __name__ == "__main__":
 
     # W&B related parameters
     parser.add_argument("--log_interval", type=int, default=100)
-    parser.add_argument("--project", type=str, default="emotion_recognition")
-    parser.add_argument("--entity", type=str, required=True)
+    parser.add_argument("--project", type=str, default="emotion-recognition")
+    parser.add_argument("--entity", type=str, default="deep-learning-ub")
 
     parser.add_argument("--model_name", type=str, required=True)
 
