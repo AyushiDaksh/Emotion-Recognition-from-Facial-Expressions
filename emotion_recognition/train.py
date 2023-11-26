@@ -271,6 +271,8 @@ if __name__ == "__main__":
             optimizer = AdamW(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "sgd":
             optimizer = SGD(model.parameters(), lr=run_config["lr"])
+        else:
+            raise NotImplementedError
 
         # Loss function
         criterion = CrossEntropyLoss()
