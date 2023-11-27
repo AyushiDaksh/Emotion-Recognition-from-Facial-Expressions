@@ -180,6 +180,9 @@ def train(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    # Location of dataset
+    parser.add_argument("--root", type=str, default=DEFAULT_DS_ROOT)
+
     # W&B related parameters
     parser.add_argument("--log_interval", type=int, default=100)
     parser.add_argument("--project", type=str, default="emotion-recognition")
@@ -202,6 +205,7 @@ if __name__ == "__main__":
 
     # Parse the args and remove the non-hyperparameter keys
     run_config = vars(parser.parse_args())
+    root = run_config.pop("root")
     entity = run_config.pop("entity")
     project = run_config.pop("project")
     model_name = run_config.pop("model_name")
@@ -232,7 +236,7 @@ if __name__ == "__main__":
                 transforms.ToImage(),
             ]
         )
-        dataset = FER2013(root=DEFAULT_DS_ROOT, split="train", transform=transform)
+        dataset = FER2013(root=root, split="train", transform=transform)
 
         # 80%-20% Train-validation split
         train_size = int(len(dataset) * 0.8)

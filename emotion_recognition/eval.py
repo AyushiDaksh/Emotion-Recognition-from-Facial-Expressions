@@ -87,6 +87,9 @@ if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser()
 
+    # Location of dataset
+    parser.add_argument("--root", type=str, default=DEFAULT_DS_ROOT)
+
     # Wandb-specific params
     parser.add_argument("--runid", type=str, required=True, help="ID of train run")
     parser.add_argument("--project", type=str, default="emotion_recognition")
@@ -126,7 +129,7 @@ if __name__ == "__main__":
             ]
         )
         dataset = WrapperDataset(
-            FER2013(root=DEFAULT_DS_ROOT, split="test", transform=transform),
+            FER2013(root=run_config.root, split="test", transform=transform),
             transform=test_transform,
         )
 
