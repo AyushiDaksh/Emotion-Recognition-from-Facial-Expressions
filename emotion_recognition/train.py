@@ -238,8 +238,8 @@ if __name__ == "__main__":
         )
         dataset = FER2013(root=root, split="train", transform=transform)
 
-        # 80%-20% Train-validation split
-        train_size = int(len(dataset) * 0.8)
+        # 85%-15% Train-validation split
+        train_size = int(len(dataset) * 0.85)
         val_size = len(dataset) - train_size
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
@@ -248,13 +248,13 @@ if __name__ == "__main__":
             [
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
-                transforms.ColorJitter(brightness=0.5, contrast=0.2),
+                transforms.ColorJitter(brightness=0.2, contrast=0.1),
                 transforms.RandomResizedCrop(
-                    IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
+                    IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
                 ),
-                transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
-                transforms.RandomAffine(degrees=45, translate=(0.4, 0.4)),
-                transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+                transforms.RandomAdjustSharpness(sharpness_factor=0.25, p=0.2),
+                transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
+                transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
                 transforms.ToDtype(torch.float, scale=True),
             ]
         )
