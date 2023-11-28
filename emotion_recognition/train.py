@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     # Run-specific parameters
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
+    parser.add_argument("--device", choices=["cpu", "cuda", "mps"], default="cuda")
 
     # Common hyperparameters
     parser.add_argument(

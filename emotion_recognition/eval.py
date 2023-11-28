@@ -14,6 +14,10 @@ from dataset import FER2013, WrapperDataset
 from constants import *
 from utils import get_device, get_model
 
+from wandb import Api
+
+api = Api()
+
 
 @torch.no_grad()
 def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
@@ -92,11 +96,11 @@ if __name__ == "__main__":
 
     # Wandb-specific params
     parser.add_argument("--runid", type=str, required=True, help="ID of train run")
-    parser.add_argument("--project", type=str, default="emotion_recognition")
-    parser.add_argument("--entity", type=str, required=True)
+    parser.add_argument("--project", type=str, default="emotion-recognition")
+    parser.add_argument("--entity", type=str, default="deep-learning-ub")
 
     # Device to run on
-    parser.add_argument("--device", choices=["cpu", "cuda"], default="cuda")
+    parser.add_argument("--device", choices=["cpu", "cuda", "mps"], default="cuda")
     run_config = parser.parse_args()
 
     # Start wandb run
@@ -105,15 +109,16 @@ if __name__ == "__main__":
         project=run_config.project,
         id=run_config.runid,
         resume="must",
-    ):
+    ) as wandb_r:
         # Get best device on machine
         device = get_device(run_config.device)
 
-        model = get_model(wandb.config.model_name)
+        model_name = api.run(wandb_r.path).group
+        model = get_model(model_name)
 
         # Fetch weights from wandb train run
         weights_file = wandb.restore("best_model.pt")
-        model.load_state_dict(torch.load(os.path.join(wandb.run.dir, "best_model.pt")))
+        model.load_state_dict(torch.load(os.path.join(wandb_r.dir, "best_model.pt")))
 
         # Initialize test dataset with the common transforms
         transform = transforms.Compose(
@@ -138,7 +143,11 @@ if __name__ == "__main__":
 
         # Evaluate model on test data and get metrics
         metrics = evaluate(
-            model, dataset, criterion, batch_size=wandb.config.batchsize, device=device
+            model,
+            dataset,
+            criterion,
+            batch_size=wandb_r.config.batchsize,
+            device=device,
         )
 
         # Log the summary into W&B
@@ -192,6 +201,6 @@ if __name__ == "__main__":
 
         fig.tight_layout()
 
-        fig.savefig(f"{wandb.config.model_name}__test_plots.jpg")
+        fig.savefig(f"{model_name}__test_plots.jpg")
 
         wandb.log({"test/plots": fig})
