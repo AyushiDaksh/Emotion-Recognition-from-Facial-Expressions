@@ -28,6 +28,9 @@ if __name__ == "__main__":
         help="Path to the weights file",
     )
 
+    parser.add_argument("--detection_interval", type=int, default=1)
+    parser.add_argument("--recognition_interval", type=int, default=1)
+
     args = parser.parse_args()
 
     # Initialize the webcam
@@ -44,8 +47,6 @@ if __name__ == "__main__":
         sys.exit("Failed to open webcam.")
 
     prev_frame_time = 0
-    face_detection_interval = 1
-    emotion_analysis_interval = 1
     frame_count = 0
 
     # Load model weights and switch on eval mode
@@ -68,7 +69,7 @@ if __name__ == "__main__":
             frame_count += 1
 
             latency = "N/A"  # Default value if no face detection is performed
-            if frame_count % face_detection_interval == 0:
+            if frame_count % args.detection_interval == 0:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 start_time = time.time()
                 faces = face_cascade.detectMultiScale(gray, 1.1, 4)
@@ -78,7 +79,7 @@ if __name__ == "__main__":
                     # Draw rectangle around each face
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-                    if frame_count % emotion_analysis_interval == 0:
+                    if frame_count % args.recognition_interval == 0:
                         face = frame[y : y + h, x : x + w]
                         # Convert the color space from BGR (OpenCV default) to RGB
                         face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
