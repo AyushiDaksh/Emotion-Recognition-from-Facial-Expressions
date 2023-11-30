@@ -10,7 +10,7 @@ import argparse
 import os
 import wandb
 
-from dataset import FER2013, WrapperDataset, get_balanced_sampler
+from dataset import COMMON_TRANSFORMS, FER2013, WrapperDataset, get_balanced_sampler
 from constants import *
 from eval import evaluate
 from utils import get_device, get_model, set_seed
@@ -229,14 +229,7 @@ if __name__ == "__main__":
         model = get_model(model_name)
 
         # Initialize train dataset with the common transforms
-        transform = transforms.Compose(
-            [
-                transforms.Grayscale(num_output_channels=1),
-                transforms.Resize(IMG_SIZE, antialias=True),
-                transforms.ToImage(),
-            ]
-        )
-        dataset = FER2013(root=root, split="train", transform=transform)
+        dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
 
         # 85%-15% Train-validation split
         train_size = int(len(dataset) * 0.85)
@@ -244,7 +237,7 @@ if __name__ == "__main__":
         train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
         # Define separate transforms for train and val
-        train_transform = transforms.Compose(
+        train_augment = transforms.Compose(
             [
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
@@ -258,15 +251,15 @@ if __name__ == "__main__":
                 transforms.ToDtype(torch.float, scale=True),
             ]
         )
-        val_transform = transforms.Compose(
+        val_augment = transforms.Compose(
             [
                 transforms.ToDtype(torch.float, scale=True),
             ]
         )  # TODO: Maybe weak augmentations here too?
 
         # Initialize train and validation datasets
-        train_dataset = WrapperDataset(train_dataset, transform=train_transform)
-        val_dataset = WrapperDataset(val_dataset, transform=val_transform)
+        train_dataset = WrapperDataset(train_dataset, transform=train_augment)
+        val_dataset = WrapperDataset(val_dataset, transform=val_augment)
 
         # Initialize optimizer
         if run_config["optim"] == "adam":

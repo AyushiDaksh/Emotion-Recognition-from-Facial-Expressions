@@ -1,12 +1,21 @@
 import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_image, ImageReadMode
+from torchvision.transforms import v2 as transforms
 from torch.utils.data import Dataset, WeightedRandomSampler
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
 
-from constants import CLASSES
+from constants import CLASSES, IMG_SIZE
+
+COMMON_TRANSFORMS = transforms.Compose(
+    [
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Resize(IMG_SIZE, antialias=True),
+        transforms.ToImage(),
+    ]
+)
 
 
 class FER2013(VisionDataset):

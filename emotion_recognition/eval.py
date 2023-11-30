@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 
-from dataset import FER2013, WrapperDataset
+from dataset import COMMON_TRANSFORMS, FER2013, WrapperDataset
 from constants import *
 from utils import get_device, get_model
 
@@ -121,21 +121,14 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(os.path.join(wandb_r.dir, "best_model.pt")))
 
         # Initialize test dataset with the common transforms
-        transform = transforms.Compose(
-            [
-                transforms.Grayscale(num_output_channels=1),
-                transforms.Resize(IMG_SIZE, antialias=True),
-                transforms.ToImage(),
-            ]
-        )
-        test_transform = transforms.Compose(
+        test_augment = transforms.Compose(
             [
                 transforms.ToDtype(torch.float, scale=True),
             ]
         )
         dataset = WrapperDataset(
-            FER2013(root=run_config.root, split="test", transform=transform),
-            transform=test_transform,
+            FER2013(root=run_config.root, split="test", transform=COMMON_TRANSFORMS),
+            transform=test_augment,
         )
 
         # Loss function
@@ -176,7 +169,7 @@ if __name__ == "__main__":
         roc_auc = dict()
         for idx, cls in enumerate(CLASSES):
             class_truth = (metrics["ground_truth"].numpy() == idx).astype(int)
-            class_pred = torch.nn.functional.softmax(metrics["logits"]).numpy()[
+            class_pred = torch.nn.functional.softmax(metrics["logits"], dim=-1).numpy()[
                 ..., idx
             ]
             fpr[idx], tpr[idx], _ = roc_curve(class_truth, class_pred)
