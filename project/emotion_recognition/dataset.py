@@ -1,4 +1,3 @@
-import torch
 from torchvision.datasets import VisionDataset
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import v2 as transforms
@@ -7,7 +6,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import os
 
-from constants import CLASSES, IMG_SIZE
+from project.emotion_recognition.constants import CLASSES, IMG_SIZE
 
 COMMON_TRANSFORMS = transforms.Compose(
     [

@@ -10,9 +10,13 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 
-from dataset import COMMON_TRANSFORMS, FER2013, WrapperDataset
-from constants import *
-from utils import get_device, get_model
+from project.emotion_recognition.dataset import (
+    COMMON_TRANSFORMS,
+    FER2013,
+    WrapperDataset,
+)
+from project.emotion_recognition.constants import *
+from project.emotion_recognition.utils import get_device, get_model
 
 from wandb import Api
 

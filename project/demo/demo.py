@@ -8,8 +8,8 @@ import torch
 
 import sys
 
-from emotion_recognition.constants import CLASSES
-from emotion_recognition.dataset import COMMON_TRANSFORMS
+from project.emotion_recognition.constants import CLASSES
+from project.emotion_recognition.dataset import COMMON_TRANSFORMS
 
 
 def get_resource_usage():

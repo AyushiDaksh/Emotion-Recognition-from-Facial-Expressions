@@ -3,7 +3,7 @@ import random
 import numpy as np
 from logging import warn
 
-from constants import CLASSES, MODEL_NAME_MAP
+from project.emotion_recognition.constants import CLASSES, MODEL_NAME_MAP
 
 
 def set_seed(seed):
