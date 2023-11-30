@@ -5,6 +5,7 @@ import psutil
 import GPUtil
 from PIL import Image
 import torch
+from torchvision.transforms import v2 as transforms
 
 import sys
 
@@ -29,8 +30,8 @@ if __name__ == "__main__":
         help="Path to the weights file",
     )
 
-    parser.add_argument("--detection_interval", type=int, default=10)
-    parser.add_argument("--recognition_interval", type=int, default=10)
+    parser.add_argument("--detection_interval", type=int, default=1)
+    parser.add_argument("--recognition_interval", type=int, default=1)
 
     args = parser.parse_args()
 
@@ -88,7 +89,13 @@ if __name__ == "__main__":
                         # Convert the frame to a PIL Image
                         face = Image.fromarray(face)
                         # Apply the common transforms
-                        face = COMMON_TRANSFORMS(face)
+                        transform = transforms.Compose(
+                            [
+                                COMMON_TRANSFORMS,
+                                transforms.ToDtype(torch.float, scale=True),
+                            ]
+                        )
+                        face = transform(face)
                         # Add an extra batch dimension since models expect batches
                         face = face.unsqueeze(0)
                         try:
@@ -99,7 +106,8 @@ if __name__ == "__main__":
                                 )
                                 output = torch.argmax(output, dim=-1)
                             emotion = CLASSES[output.item()]
-                        except:
+                        except Exception as error:
+                            print("An exception occurred", error)
                             emotion = "Detection Failed"
                         # Put emotion text above the rectangle
                         cv2.putText(
