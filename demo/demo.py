@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import time
 import psutil
@@ -7,7 +8,7 @@ import torch
 
 import sys
 
-from emotion_recognition.constants import CLASSES, IMG_SIZE
+from emotion_recognition.constants import CLASSES
 from emotion_recognition.dataset import COMMON_TRANSFORMS
 
 
@@ -18,6 +19,17 @@ def get_resource_usage():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, default="resnet18")
+    parser.add_argument(
+        "--weights",
+        type=str,
+        default="best_emotion_model.pt",
+        help="Path to the weights file",
+    )
+
+    args = parser.parse_args()
+
     # Initialize the webcam
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -36,7 +48,10 @@ if __name__ == "__main__":
     emotion_analysis_interval = 1
     frame_count = 0
 
-    model = None  # TODO: Initialize model and load weights
+    # Load model weights and switch on eval mode
+    model = torch.load(args.weights)
+    model.eval()
+    torch.set_grad_enabled(False)
 
     # Open the log file
     with open("performance_log.csv", "w") as log_file:
@@ -75,7 +90,6 @@ if __name__ == "__main__":
                         face = face.unsqueeze(0)
                         try:
                             # inference function
-                            model.eval()  # Set the model to evaluation mode
                             with torch.no_grad():
                                 output = torch.nn.functional.softmax(
                                     model(face), dim=-1
@@ -116,3 +130,4 @@ if __name__ == "__main__":
 
     cap.release()
     cv2.destroyAllWindows()
+    torch.set_grad_enabled(True)
