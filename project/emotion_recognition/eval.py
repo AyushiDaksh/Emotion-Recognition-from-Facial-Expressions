@@ -46,6 +46,7 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
         It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
     """
     model.eval()  # Switch on evaluation model
+    torch.set_grad_enabled(False)
 
     # Initialize lists for different metrics
     loss, accuracy, class_auroc, macro_auroc = [], [], [], []
@@ -87,6 +88,8 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     class_auroc = class_auroc[0]
     for i, label in enumerate(CLASSES):
         result[f"{label}_auroc"] = class_auroc[i]
+
+    torch.set_grad_enabled(True)
 
     return result
 

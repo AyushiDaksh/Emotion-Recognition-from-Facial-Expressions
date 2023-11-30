@@ -10,6 +10,7 @@ import sys
 
 from project.emotion_recognition.constants import CLASSES
 from project.emotion_recognition.dataset import COMMON_TRANSFORMS
+from project.emotion_recognition.utils import get_model
 
 
 def get_resource_usage():
@@ -24,12 +25,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--weights",
         type=str,
-        default="best_emotion_model.pt",
+        default="./project/demo/best_emotion_model.pt",
         help="Path to the weights file",
     )
 
-    parser.add_argument("--detection_interval", type=int, default=1)
-    parser.add_argument("--recognition_interval", type=int, default=1)
+    parser.add_argument("--detection_interval", type=int, default=10)
+    parser.add_argument("--recognition_interval", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -50,7 +51,8 @@ if __name__ == "__main__":
     frame_count = 0
 
     # Load model weights and switch on eval mode
-    model = torch.load(args.weights)
+    model = get_model(args.model_name)
+    model.load_state_dict(torch.load(args.weights))
     model.eval()
     torch.set_grad_enabled(False)
 
@@ -84,7 +86,7 @@ if __name__ == "__main__":
                         # Convert the color space from BGR (OpenCV default) to RGB
                         face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
                         # Convert the frame to a PIL Image
-                        face = Image.fromarray(face_rgb)
+                        face = Image.fromarray(face)
                         # Apply the common transforms
                         face = COMMON_TRANSFORMS(face)
                         # Add an extra batch dimension since models expect batches
