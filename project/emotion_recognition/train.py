@@ -205,7 +205,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--dropout", type=float, default=0.5)
+    parser.add_argument("--dropout", type=float, default=0.4)
 
     # Parse the args and remove the non-hyperparameter keys
     run_config = vars(parser.parse_args())
@@ -245,13 +245,13 @@ if __name__ == "__main__":
             [
                 transforms.RandomHorizontalFlip(),
                 transforms.RandomVerticalFlip(),
-                transforms.ColorJitter(brightness=0.5, contrast=0.2),
+                transforms.ColorJitter(brightness=0.2, contrast=0.1),
                 transforms.RandomResizedCrop(
-                    IMG_SIZE, scale=(0.8, 1), ratio=(1, 4 / 3), antialias=True
+                    IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
                 ),
-                transforms.RandomAdjustSharpness(sharpness_factor=0.5, p=0.2),
-                transforms.RandomAffine(degrees=45, translate=(0.4, 0.4)),
-                transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+                transforms.RandomAdjustSharpness(sharpness_factor=0.25, p=0.2),
+                transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
+                transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
                 transforms.ToDtype(torch.float, scale=True),
             ]
         )
