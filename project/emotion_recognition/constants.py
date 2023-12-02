@@ -1,4 +1,11 @@
-from torchvision.models import resnet18, resnet34, vgg11_bn, vgg13_bn, vgg16_bn
+from torchvision.models import (
+    resnet18,
+    resnet34,
+    vgg11_bn,
+    vgg13_bn,
+    vgg16_bn,
+    vgg19_bn,
+)
 
 CLASSES = ["angry", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
 CLASS_IDX_MAP = {cls_name: cls_idx for cls_idx, cls_name in enumerate(CLASSES)}
@@ -13,4 +20,5 @@ MODEL_NAME_MAP = {
     "vgg11_bn": vgg11_bn,
     "vgg13_bn": vgg13_bn,
     "vgg16_bn": vgg16_bn,
+    "vgg19_bn": vgg19_bn,
 }
