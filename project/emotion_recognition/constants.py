@@ -5,6 +5,16 @@ from torchvision.models import (
     vgg13_bn,
     vgg16_bn,
     vgg19_bn,
+
+    convnext_tiny,
+    efficientnet_b7,
+    inception_v3,
+    efficientnet_v2_s,
+    mobilenet_v3_small,
+    resnext50_32x4d,
+    shufflenet_v2_x0_5,
+    squeezenet1_1,
+    wide_resnet50_2,
 )
 
 CLASSES = ["angry", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
@@ -21,4 +31,14 @@ MODEL_NAME_MAP = {
     "vgg13_bn": vgg13_bn,
     "vgg16_bn": vgg16_bn,
     "vgg19_bn": vgg19_bn,
+
+    "convnext_tiny": convnext_tiny,
+    "efficientnet_b7": efficientnet_b7,
+    "efficientnet_v2_s":efficientnet_v2_s,
+    "inception_v3":inception_v3,
+    "mobilenet_v3_small":mobilenet_v3_small,
+    "resnext50_32x4d": resnext50_32x4d,
+    "shufflenet_v2_x0_5": shufflenet_v2_x0_5,
+    "squeezenet1_1": squeezenet1_1,
+    "wide_resnet50_2": wide_resnet50_2,
 }

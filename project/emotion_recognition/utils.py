@@ -37,3 +37,15 @@ def get_model(model_name):
         # Change the model to accept single channel images
         model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=3, padding=1)
     return model
+
+
+class EnsembleModel:
+    def __init__(self, model_names):
+        self.models = [get_model(name) for name in model_names]
+
+    def forward(self, x):
+        # Get predictions from all models
+        preds = [model(x) for model in self.models]
+        # Combine predictions. Here we are simply averaging them
+        ensemble_pred = torch.mean(torch.stack(preds), dim=0)
+        return ensemble_pred

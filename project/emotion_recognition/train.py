@@ -193,6 +193,8 @@ if __name__ == "__main__":
     parser.add_argument("--entity", type=str, default="deep-learning-ub")
 
     parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument('--train_all', type=bool, default=False)
+
 
     # Run-specific parameters
     parser.add_argument("--seed", type=int)
@@ -217,20 +219,19 @@ if __name__ == "__main__":
     device = get_device(run_config.pop("device"))
     log_interval = run_config.pop("log_interval")
 
+
     # Start wandb run
     with wandb.init(
         entity=entity,
         project=project,
         config=run_config,
-        group=model_name,
+        group=run_config.get('model_name') or 'all_models',
         job_type=None,
     ):
         # Set random seed
         if seed:
             set_seed(seed)
 
-        # Initialize model
-        model = get_model(model_name)
 
         # Initialize train dataset with the common transforms
         dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
@@ -265,28 +266,58 @@ if __name__ == "__main__":
         train_dataset = WrapperDataset(train_dataset, transform=train_augment)
         val_dataset = WrapperDataset(val_dataset, transform=val_augment)
 
-        # Initialize optimizer
-        if run_config["optim"] == "adam":
-            optimizer = Adam(model.parameters(), lr=run_config["lr"])
-        elif run_config["optim"] == "adamw":
-            optimizer = AdamW(model.parameters(), lr=run_config["lr"])
-        elif run_config["optim"] == "sgd":
-            optimizer = SGD(model.parameters(), lr=run_config["lr"])
-        else:
-            raise NotImplementedError
 
         # Loss function
         criterion = CrossEntropyLoss()
 
-        # Train the model and get the best validation metrics
-        best_val_metrics = train(
-            model,
-            train_dataset,
-            val_dataset,
-            criterion,
-            optimizer,
-            run_config["epochs"],
-            run_config["batchsize"],
-            device,
-            log_interval,
-        )
+        if run_config.get('train_all'):
+            for model_name in MODEL_NAME_MAP:
+                print(f"Training {model_name}")
+                model = MODEL_NAME_MAP[model_name]().to(device)
+                # Reinitialize optimizer for the new model
+                if run_config["optim"] == "adam":
+                    optimizer = Adam(model.parameters(), lr=run_config["lr"])
+                elif run_config["optim"] == "adamw":
+                    optimizer = AdamW(model.parameters(), lr=run_config["lr"])
+                elif run_config["optim"] == "sgd":
+                    optimizer = SGD(model.parameters(), lr=run_config["lr"])
+                
+                # Train the model
+                best_val_metrics = train(
+                    model,
+                    train_dataset,
+                    val_dataset,
+                    criterion,
+                    optimizer,
+                    run_config["epochs"],
+                    run_config["batchsize"],
+                    device,
+                    log_interval,
+                )
+
+        else:
+            # Initialize model
+            model = get_model(model_name)
+
+             # Initialize optimizer
+            if run_config["optim"] == "adam":
+                optimizer = Adam(model.parameters(), lr=run_config["lr"])
+            elif run_config["optim"] == "adamw":
+                optimizer = AdamW(model.parameters(), lr=run_config["lr"])
+            elif run_config["optim"] == "sgd":
+                optimizer = SGD(model.parameters(), lr=run_config["lr"])
+            else:
+                raise NotImplementedError
+    
+            # Train the model and get the best validation metrics
+            best_val_metrics = train(
+                model,
+                train_dataset,
+                val_dataset,
+                criterion,
+                optimizer,
+                run_config["epochs"],
+                run_config["batchsize"],
+                device,
+                log_interval,
+            )
