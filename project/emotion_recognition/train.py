@@ -200,7 +200,7 @@ if __name__ == "__main__":
 
     # Common hyperparameters
     parser.add_argument(
-        "--optim", type=str, choices=["sgd", "adam", "adamw"], default="adamw"
+        "--optim", type=str, choices=["adam", "adamw", "sgd"], default="adam"
     )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)

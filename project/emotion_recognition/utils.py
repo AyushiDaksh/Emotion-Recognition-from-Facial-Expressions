@@ -33,4 +33,7 @@ def get_model(model_name):
         model.conv1 = torch.nn.Conv2d(
             1, 64, kernel_size=7, stride=2, padding=3, bias=False
         )
+    elif "vgg" in model_name:
+        # Change the model to accept single channel images
+        model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=3, padding=1)
     return model
