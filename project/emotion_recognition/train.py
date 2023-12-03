@@ -212,7 +212,7 @@ def run_experiment(
         # Define separate transforms for train and val
         train_augment = transforms.Compose(
             [
-                # transforms.RandomHorizontalFlip(),
+                transforms.RandomHorizontalFlip(),
                 # transforms.RandomVerticalFlip(),
                 # transforms.ColorJitter(brightness=0.2, contrast=0.1),
                 # transforms.RandomResizedCrop(
