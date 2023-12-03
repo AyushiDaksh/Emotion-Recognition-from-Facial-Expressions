@@ -318,4 +318,3 @@ if __name__ == "__main__":
             device=device,
             log_interval=log_interval,
         )
-        print(f"Best validation metrics are: {val_result}\n")
