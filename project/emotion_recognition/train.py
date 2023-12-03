@@ -222,12 +222,12 @@ def run_experiment(
                 # transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
                 # transforms.GaussianBlur(kernel_size=(3, 3), sigma=(0.1, 5.)),
                 # transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
-                transforms.ToDtype(torch.float, scale=True),
+                transforms.ToDtype(torch.float, scale=run_config["scale"]),
             ]
         )
         val_augment = transforms.Compose(
             [
-                transforms.ToDtype(torch.float, scale=True),
+                transforms.ToDtype(torch.float, scale=run_config["scale"]),
             ]
         )  # TODO: Maybe weak augmentations here too?
 
@@ -289,6 +289,9 @@ if __name__ == "__main__":
     parser.add_argument("--device", choices=["cpu", "cuda", "mps"], default="cuda")
 
     # Common hyperparameters
+    parser.add_argument(
+        "--scale", action="store_true", help="Scale variables before augmentation"
+    )
     parser.add_argument(
         "--optim", type=str, choices=["adam", "adamw", "sgd"], default="adam"
     )

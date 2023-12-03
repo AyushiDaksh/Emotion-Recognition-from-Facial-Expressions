@@ -146,7 +146,7 @@ if __name__ == "__main__":
         # Initialize test dataset with the common transforms
         test_augment = transforms.Compose(
             [
-                transforms.ToDtype(torch.float, scale=True),
+                transforms.ToDtype(torch.float, scale=wandb_r.config["scale"]),
             ]
         )
         dataset = WrapperDataset(
