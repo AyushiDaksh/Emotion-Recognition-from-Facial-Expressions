@@ -17,12 +17,12 @@ from project.emotion_recognition.dataset import (
 )
 from project.emotion_recognition.constants import *
 from project.emotion_recognition.eval import evaluate
-from project.emotion_recognition.utils import get_device, get_model, set_seed
+from project.emotion_recognition.utils import get_model, set_seed
 
 # from eval import evaluate
 
 
-def train_step(model, images, labels, optimizer, criterion, device="cpu"):
+def train_step(model, images, labels, optimizer, criterion, device="cuda"):
     """
     Takes one train step (forward + backward pass) on a batch
 
@@ -67,7 +67,7 @@ def train(
     optimizer,
     epochs,
     batch_size=64,
-    device="cpu",
+    device="cuda",
     log_interval=100,
 ):
     """
@@ -95,7 +95,7 @@ def train(
     -------
     dict
         Metrics on validation data from best model (based on val AUROC).
-        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "auroc".
     """
     # Initialize data loaders for iterating mini-batches
     train_loader = DataLoader(
@@ -112,7 +112,7 @@ def train(
     # Alert wandb to log this training
     wandb.watch(model, criterion, log="all", log_freq=log_interval)
 
-    best_val_metrics = dict(macro_auroc=0.0)
+    best_val_metrics = dict(auroc=0.0)
     batch_num = 0
     for epoch in range(1, epochs + 1):
         for batch_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
@@ -137,8 +137,15 @@ def train(
                     "epoch": epoch,
                     "batch_num": batch_num,
                     "val/loss": val_metrics["loss"],
-                    "val/accuracy": val_metrics["accuracy"],
-                    "val/macro_auroc": val_metrics["macro_auroc"],
+                    "val/top1_precision": val_metrics["top1_precision"],
+                    "val/top2_precision": val_metrics["top2_precision"],
+                    "val/top1_recall": val_metrics["top1_recall"],
+                    "val/top2_recall": val_metrics["top2_recall"],
+                    "val/top1_f1": val_metrics["top1_f1"],
+                    "val/top2_f1": val_metrics["top2_f1"],
+                    "val/top1_accuracy": val_metrics["top1_accuracy"],
+                    "val/top2_accuracy": val_metrics["top2_accuracy"],
+                    "val/auroc": val_metrics["auroc"],
                 }
                 # Classwise validation AUROC
                 for cls_name in CLASSES:
@@ -159,10 +166,8 @@ def train(
                 )
 
                 # Update best val auroc
-                if val_metrics["macro_auroc"] > best_val_metrics["macro_auroc"]:
-                    wandb.run.summary["best_val_macro_auroc"] = val_metrics[
-                        "macro_auroc"
-                    ]
+                if val_metrics["auroc"] > best_val_metrics["auroc"]:
+                    wandb.run.summary["best_val_auroc"] = val_metrics["auroc"]
                     wandb.run.summary["best_epoch"] = epoch
                     wandb.run.summary["best_batch_num"] = batch_num
                     for label in CLASSES:
@@ -176,8 +181,88 @@ def train(
                     )
 
     # Sync best model to wandb
-    wandb.save(os.path.join(wandb.run.dir, "best_model.pt"))
+    wandb.save(os.path.join(wandb.run.dir, f"best_model.pt"))
 
+    return best_val_metrics
+
+
+def run_experiment(
+    run_config, entity, project, root, seed, device="cuda", log_interval=100
+):
+    # Start wandb run
+    with wandb.init(
+        entity=entity,
+        project=project,
+        config=run_config,
+        group=model_name,
+        job_type=None,
+    ):
+        # Set random seed
+        if seed:
+            set_seed(seed)
+
+        # Initialize train dataset with the common transforms
+        dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
+
+        # 85%-15% Train-validation split
+        train_size = int(len(dataset) * 0.85)
+        val_size = len(dataset) - train_size
+        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+        # Define separate transforms for train and val
+        train_augment = transforms.Compose(
+            [
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomVerticalFlip(),
+                # transforms.ColorJitter(brightness=0.2, contrast=0.1),
+                # transforms.RandomResizedCrop(
+                #    IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
+                # ),
+                # transforms.RandomAdjustSharpness(sharpness_factor=0.25, p=0.2),
+                # transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
+                # transforms.GaussianBlur(kernel_size=(3, 3), sigma=(0.1, 5.)),
+                # transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
+                transforms.ToDtype(torch.float, scale=True),
+            ]
+        )
+        val_augment = transforms.Compose(
+            [
+                transforms.ToDtype(torch.float, scale=True),
+            ]
+        )  # TODO: Maybe weak augmentations here too?
+
+        # Initialize train and validation datasets
+        train_dataset = WrapperDataset(train_dataset, transform=train_augment)
+        val_dataset = WrapperDataset(val_dataset, transform=val_augment)
+
+        # Loss function
+        criterion = CrossEntropyLoss()
+
+        # Initialize model
+        model = get_model(model_name).to(device)
+
+        # Initialize optimizer
+        if run_config["optim"] == "adam":
+            optimizer = Adam(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adamw":
+            optimizer = AdamW(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "sgd":
+            optimizer = SGD(model.parameters(), lr=run_config["lr"])
+        else:
+            raise NotImplementedError
+
+        # Train the model and get the best validation metrics
+        best_val_metrics = train(
+            model,
+            train_dataset,
+            val_dataset,
+            criterion,
+            optimizer,
+            run_config["epochs"],
+            run_config["batchsize"],
+            device,
+            log_interval,
+        )
     return best_val_metrics
 
 
@@ -189,10 +274,15 @@ if __name__ == "__main__":
 
     # W&B related parameters
     parser.add_argument("--log_interval", type=int, default=100)
-    parser.add_argument("--project", type=str, default="emotion-recognition")
+    parser.add_argument("--project", type=str, default="emotion-recognition-new")
     parser.add_argument("--entity", type=str, default="deep-learning-ub")
 
-    parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument(
+        "--models",
+        nargs="+",
+        help="Single model or list of models",
+        default=list(MODEL_NAME_MAP.keys()),
+    )
 
     # Run-specific parameters
     parser.add_argument("--seed", type=int)
@@ -209,84 +299,23 @@ if __name__ == "__main__":
 
     # Parse the args and remove the non-hyperparameter keys
     run_config = vars(parser.parse_args())
-    root = run_config.pop("root")
     entity = run_config.pop("entity")
     project = run_config.pop("project")
-    model_name = run_config.pop("model_name")
+    root = run_config.pop("root")
     seed = run_config.pop("seed", None)
-    device = get_device(run_config.pop("device"))
+    device = run_config.pop("device")
     log_interval = run_config.pop("log_interval")
 
-    # Start wandb run
-    with wandb.init(
-        entity=entity,
-        project=project,
-        config=run_config,
-        group=model_name,
-        job_type=None,
-    ):
-        # Set random seed
-        if seed:
-            set_seed(seed)
-
-        # Initialize model
-        model = get_model(model_name)
-
-        # Initialize train dataset with the common transforms
-        dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
-
-        # 85%-15% Train-validation split
-        train_size = int(len(dataset) * 0.85)
-        val_size = len(dataset) - train_size
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-
-        # Define separate transforms for train and val
-        train_augment = transforms.Compose(
-            [
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-                transforms.ColorJitter(brightness=0.2, contrast=0.1),
-                transforms.RandomResizedCrop(
-                    IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
-                ),
-                transforms.RandomAdjustSharpness(sharpness_factor=0.25, p=0.2),
-                transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
-                transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
-                transforms.ToDtype(torch.float, scale=True),
-            ]
+    models = run_config.pop("models")
+    for model_name in models:
+        print(f"Training model {model_name}")
+        val_result = run_experiment(
+            run_config,
+            entity,
+            project,
+            root,
+            seed=seed,
+            device=device,
+            log_interval=log_interval,
         )
-        val_augment = transforms.Compose(
-            [
-                transforms.ToDtype(torch.float, scale=True),
-            ]
-        )  # TODO: Maybe weak augmentations here too?
-
-        # Initialize train and validation datasets
-        train_dataset = WrapperDataset(train_dataset, transform=train_augment)
-        val_dataset = WrapperDataset(val_dataset, transform=val_augment)
-
-        # Initialize optimizer
-        if run_config["optim"] == "adam":
-            optimizer = Adam(model.parameters(), lr=run_config["lr"])
-        elif run_config["optim"] == "adamw":
-            optimizer = AdamW(model.parameters(), lr=run_config["lr"])
-        elif run_config["optim"] == "sgd":
-            optimizer = SGD(model.parameters(), lr=run_config["lr"])
-        else:
-            raise NotImplementedError
-
-        # Loss function
-        criterion = CrossEntropyLoss()
-
-        # Train the model and get the best validation metrics
-        best_val_metrics = train(
-            model,
-            train_dataset,
-            val_dataset,
-            criterion,
-            optimizer,
-            run_config["epochs"],
-            run_config["batchsize"],
-            device,
-            log_interval,
-        )
+        print(f"Best validation metrics are: {val_result}\n")

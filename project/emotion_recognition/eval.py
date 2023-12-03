@@ -2,8 +2,17 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 from torchvision.transforms import v2 as transforms
-from torchmetrics.functional import auroc as auroc_fn, accuracy as accuracy_fn
-from sklearn.metrics import ConfusionMatrixDisplay, roc_curve
+from torchmetrics.functional.classification import (
+    multiclass_auroc as auroc_fn,
+    multiclass_accuracy as accuracy_fn,
+    multiclass_precision as precision_fn,
+    multiclass_recall as recall_fn,
+    multiclass_f1_score as f1_score_fn,
+)
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    roc_curve,
+)
 import wandb
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +25,7 @@ from project.emotion_recognition.dataset import (
     WrapperDataset,
 )
 from project.emotion_recognition.constants import *
-from project.emotion_recognition.utils import get_device, get_model
+from project.emotion_recognition.utils import get_model
 
 from wandb import Api
 
@@ -43,13 +52,13 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     -------
     dict
         Metrics on the provided data by the given model.
-        It is a dict containing metrics like "loss", "accuracy", "macro_auroc".
+        It is a dict containing metrics like "loss", "accuracy", "auroc".
     """
     model.eval()  # Switch on evaluation model
     torch.set_grad_enabled(False)
 
     # Initialize lists for different metrics
-    loss, accuracy, class_auroc, macro_auroc = [], [], [], []
+    loss = []
     logits, y = [], []
 
     data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
@@ -66,26 +75,33 @@ def evaluate(model, dataset, loss_fn, batch_size=64, device="cpu"):
     # Concatenate all results
     logits, y = torch.cat(logits), torch.cat(y)
     loss.append(loss_fn(logits, y))
-    accuracy.append(accuracy_fn(logits, y, task="multiclass", num_classes=len(CLASSES)))
-    class_auroc.append(
-        auroc_fn(logits, y, task="multiclass", num_classes=len(CLASSES), average=None)
-    )
-    macro_auroc.append(
-        auroc_fn(
-            logits, y, task="multiclass", num_classes=len(CLASSES), average="macro"
-        )
-    )
+    top1_accuracy = accuracy_fn(logits, y, num_classes=len(CLASSES), top_k=1)
+    top2_accuracy = accuracy_fn(logits, y, num_classes=len(CLASSES), top_k=2)
+    top1_precision = precision_fn(logits, y, num_classes=len(CLASSES), top_k=1)
+    top2_precision = precision_fn(logits, y, num_classes=len(CLASSES), top_k=2)
+    top1_recall = recall_fn(logits, y, num_classes=len(CLASSES), top_k=1)
+    top2_recall = recall_fn(logits, y, num_classes=len(CLASSES), top_k=2)
+    top1_f1 = f1_score_fn(logits, y, num_classes=len(CLASSES), top_k=1)
+    top2_f1 = f1_score_fn(logits, y, num_classes=len(CLASSES), top_k=2)
+    class_auroc = auroc_fn(logits, y, num_classes=len(CLASSES), average=None)
+    auroc = auroc_fn(logits, y, num_classes=len(CLASSES))
 
     result = {
         "ground_truth": y,
         "logits": logits,
         "loss": np.mean(loss),
-        "accuracy": np.mean(accuracy),
-        "macro_auroc": np.mean(macro_auroc),
+        "auroc": auroc,
+        "top1_precision": top1_precision,
+        "top1_recall": top1_recall,
+        "top1_f1": top1_f1,
+        "top1_accuracy": top1_accuracy,
+        "top2_precision": top2_precision,
+        "top2_recall": top2_recall,
+        "top2_f1": top2_f1,
+        "top2_accuracy": top2_accuracy,
     }
 
     # Class-wise AUROC
-    class_auroc = class_auroc[0]
     for i, label in enumerate(CLASSES):
         result[f"{label}_auroc"] = class_auroc[i]
 
@@ -103,7 +119,7 @@ if __name__ == "__main__":
 
     # Wandb-specific params
     parser.add_argument("--runid", type=str, required=True, help="ID of train run")
-    parser.add_argument("--project", type=str, default="emotion-recognition")
+    parser.add_argument("--project", type=str, default="emotion-recognition-new")
     parser.add_argument("--entity", type=str, default="deep-learning-ub")
 
     # Device to run on
@@ -118,7 +134,7 @@ if __name__ == "__main__":
         resume="must",
     ) as wandb_r:
         # Get best device on machine
-        device = get_device(run_config.device)
+        device = run_config.device
 
         model_name = api.run(wandb_r.path).group
         model = get_model(model_name)
@@ -152,8 +168,16 @@ if __name__ == "__main__":
 
         # Log the summary into W&B
         wandb.run.summary["test/loss"] = metrics["loss"]
-        wandb.run.summary["test/accuracy"] = metrics["accuracy"]
-        wandb.run.summary["test/macro_auroc"] = metrics["macro_auroc"]
+        wandb.run.summary["test/top1_accuracy"] = metrics["top1_accuracy"]
+        wandb.run.summary["test/top2_accuracy"] = metrics["top2_accuracy"]
+        wandb.run.summary["test/top1_precision"] = metrics["top1_precision"]
+        wandb.run.summary["test/top2_precision"] = metrics["top2_precision"]
+        wandb.run.summary["test/top1_recall"] = metrics["top1_recall"]
+        wandb.run.summary["test/top2_recall"] = metrics["top2_recall"]
+        wandb.run.summary["test/top1_f1"] = metrics["top1_f1"]
+        wandb.run.summary["test/top2_f1"] = metrics["top2_f1"]
+        wandb.run.summary["test/auroc"] = metrics["auroc"]
+
         for cls_name in CLASSES:
             wandb.run.summary[f"test/{cls_name}_auroc"] = metrics[f"{cls_name}_auroc"]
 
@@ -185,9 +209,7 @@ if __name__ == "__main__":
                 tpr[idx],
                 label="{} ({:.2f}%)".format(cls, metrics[f"{cls}_auroc"] * 100),
             )
-        _ = axes[0].set_title(
-            "Test AUROC: {:.2f}%".format(metrics["macro_auroc"] * 100)
-        )
+        _ = axes[0].set_title("Test AUROC: {:.2f}%".format(metrics["auroc"] * 100))
         _ = axes[0].legend()
 
         disp = ConfusionMatrixDisplay.from_predictions(
