@@ -154,17 +154,6 @@ def train(
                 # Log val metrics in wandb
                 wandb.log(log_dict, step=batch_num)
 
-                # Log ROC curve for validation data
-                wandb.log(
-                    {
-                        "val/roc": wandb.plot.roc_curve(
-                            val_metrics["ground_truth"],
-                            torch.nn.functional.softmax(val_metrics["logits"], dim=-1),
-                            labels=CLASSES,
-                        )
-                    }
-                )
-
                 # Update best val auroc
                 if val_metrics["auroc"] > best_val_metrics["auroc"]:
                     wandb.run.summary["best_val_auroc"] = val_metrics["auroc"]
@@ -191,6 +180,20 @@ def train(
                             f"{label}_auroc"
                         ]
                     best_val_metrics = val_metrics
+
+                    # Log ROC curve for validation data
+                    wandb.log(
+                        {
+                            "val/roc": wandb.plot.roc_curve(
+                                val_metrics["ground_truth"],
+                                torch.nn.functional.softmax(
+                                    val_metrics["logits"], dim=-1
+                                ),
+                                labels=CLASSES,
+                            )
+                        }
+                    )
+
                     # Save best model so far in disk
                     torch.save(
                         model.state_dict(), os.path.join(wandb.run.dir, "best_model.pt")
