@@ -168,6 +168,22 @@ def train(
                 # Update best val auroc
                 if val_metrics["auroc"] > best_val_metrics["auroc"]:
                     wandb.run.summary["best_val_auroc"] = val_metrics["auroc"]
+                    wandb.run.summary["best_top1_precision"] = val_metrics[
+                        "top1_precision"
+                    ]
+                    wandb.run.summary["best_top2_precision"] = val_metrics[
+                        "top2_precision"
+                    ]
+                    wandb.run.summary["best_top1_recall"] = val_metrics["top1_recall"]
+                    wandb.run.summary["best_top2_recall"] = val_metrics["top2_recall"]
+                    wandb.run.summary["best_top1_f1"] = val_metrics["top1_f1"]
+                    wandb.run.summary["best_top2_f1"] = val_metrics["top2_f1"]
+                    wandb.run.summary["best_top1_accuracy"] = val_metrics[
+                        "top1_accuracy"
+                    ]
+                    wandb.run.summary["best_top2_accuracy"] = val_metrics[
+                        "top2_accuracy"
+                    ]
                     wandb.run.summary["best_epoch"] = epoch
                     wandb.run.summary["best_batch_num"] = batch_num
                     for label in CLASSES:
