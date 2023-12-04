@@ -215,7 +215,7 @@ def run_experiment(
         entity=entity,
         project=project,
         config=run_config,
-        group=model_name,
+        group=model_name + run_config["tag"],
         job_type=None,
     ):
         # Initialize model
@@ -281,6 +281,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", type=int, default=100)
     parser.add_argument("--project", type=str, default="emotion-recognition-new")
     parser.add_argument("--entity", type=str, default="deep-learning-ub")
+    parser.add_argument("--tag", type=str, default="")
 
     parser.add_argument(
         "--models",
