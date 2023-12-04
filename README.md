@@ -10,3 +10,4 @@ Webcam: OpenCV
 Pytorch dataset class -> []
 Augmentations ->  []
 
+pip install torch-optimizer

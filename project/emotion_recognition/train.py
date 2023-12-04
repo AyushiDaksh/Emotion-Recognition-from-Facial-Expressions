@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import v2 as transforms
 from torch.optim import AdamW, Adam, SGD, Adadelta, Adagrad, Adamax, RAdam, NAdam
+from torch_optimizer import AdaBelief, AdaBound, Lookahead, Shampoo, Ranger
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from logging import warn
@@ -267,15 +268,52 @@ def run_experiment(
         elif run_config["optim"] == "sgd":
             optimizer = SGD(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "adadelta":
-            optimizer = torch.optim.Adadelta(model.parameters(), lr=run_config["lr"])
+            optimizer = Adadelta(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "adagrad":
-            optimizer = torch.optim.Adagrad(model.parameters(), lr=run_config["lr"])
+            optimizer = Adagrad(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "adamax":
-            optimizer = torch.optim.Adamx(model.parameters(), lr=run_config["lr"])
+            optimizer = Adamax(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "nadam":
-            optimizer = torch.optim.NAdam(model.parameters(), lr=run_config["lr"])
+            optimizer = NAdam(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "radam":
-            optimizer = torch.optim.RAdam(model.parameters(), lr=run_config["lr"])
+            optimizer = RAdam(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adabelief":
+            optimizer = AdaBelief(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adabound":
+            optimizer = AdaBound(
+                model.parameters(),
+                lr= 1e-3,
+                betas= (0.9, 0.999),
+                final_lr = 0.1,
+                gamma=1e-3,
+                eps= 1e-8,
+                weight_decay=0,
+                amsbound=False,
+            )
+
+        elif run_config["optim"] == "ranger":
+            optimizer = optim.Ranger(
+                model.parameters(),
+                lr=run_config["lr"],
+                alpha=0.5,
+                k=6,
+                N_sma_threshhold=5,
+                betas=(.95, 0.999),
+                eps=1e-5,
+                weight_decay=0
+            )
+        elif run_config["optim"] == "lookahead":
+            adam = Adam(model.parameters(), lr=run_config["lr"])
+            optimizer = Lookahead(adam, k=5, alpha=0.5)
+        elif run_config["optim"] == "shampoo":
+            optimizer = Shampoo(
+                model.parameters(),
+                lr=1e-1,
+                momentum=0.0,
+                weight_decay=0.0,
+                epsilon=1e-4,
+                update_freq=1,
+            )
         else:
             raise NotImplementedError
 
@@ -322,7 +360,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--optim", type=str, choices=
-        ["adam", "adamw", "sgd", "adadelta", "adagrad", "adamax", "radam", "nadam"]
+        ["adam", "adamw", "sgd", "adadelta", "adagrad", "adamax", "radam", "nadam", "adabelief", "adabound", "ranger", "lookahead", "shampoo"]
         , default="adam"
     )
     parser.add_argument(
