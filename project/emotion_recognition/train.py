@@ -215,7 +215,7 @@ def run_experiment(
         entity=entity,
         project=project,
         config=run_config,
-        group=model_name + run_config["tag"],
+        group=model_name + "_" +run_config["tag"],
         job_type=None,
     ):
         # Initialize model
