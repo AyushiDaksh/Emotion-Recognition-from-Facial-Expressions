@@ -241,7 +241,8 @@ def run_experiment(
         model = get_model(model_name).to(device)
 
         # Initialize weights
-        model.apply(partial(initialize_weights, run_config["init_type"]))
+        if run_config["init_type"]:
+            model.apply(partial(initialize_weights, run_config["init_type"]))
 
         # Initialize optimizer
         if run_config["optim"] == "adam":
@@ -341,7 +342,7 @@ if __name__ == "__main__":
         "--init_type",
         type=str,
         choices=["uniform", "normal", "xavier_uniform", "xavier_normal"],
-        default="uniform",
+        default=None,
     )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
@@ -372,14 +373,11 @@ if __name__ == "__main__":
     # Define separate transforms for train and val
     train_augment = transforms.Compose(
         [
-            # transforms.RandomHorizontalFlip(),
-            # transforms.RandomVerticalFlip(),
-            # transforms.RandomResizedCrop(
-            #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
-            # ),
-            # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
-            # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
-            # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
+            transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
+            transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
             transforms.ToDtype(torch.float, scale=run_config["scale"]),
         ]
     )
