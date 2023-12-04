@@ -223,6 +223,10 @@ def run_experiment(
     device="cuda",
     log_interval=100,
 ):
+    # Reset random seed before starting training
+    if seed:
+        set_seed(seed)
+
     tag = run_config.pop(tag, "")
     # Start wandb run
     with wandb.init(
@@ -406,6 +410,7 @@ if __name__ == "__main__":
             criterion=criterion,
             device=device,
             log_interval=log_interval,
+            seed=seed,
         )
         trained_models.append(trained_model)
         model_names.append(model_name)
