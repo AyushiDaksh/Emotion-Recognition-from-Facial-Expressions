@@ -228,7 +228,7 @@ def run_experiment(
     if seed:
         set_seed(seed)
 
-    tag = run_config.pop(tag, "")
+    tag = run_config.pop("tag", "")
     # Start wandb run
     with wandb.init(
         entity=entity,
