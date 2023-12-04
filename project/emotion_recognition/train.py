@@ -19,7 +19,12 @@ from project.emotion_recognition.dataset import (
 )
 from project.emotion_recognition.constants import *
 from project.emotion_recognition.eval import evaluate
-from project.emotion_recognition.utils import get_model, set_seed, initialize_weights, EnsembleModel
+from project.emotion_recognition.utils import (
+    get_model,
+    set_seed,
+    initialize_weights,
+    EnsembleModel,
+)
 
 # from eval import evaluate
 
@@ -208,14 +213,23 @@ def train(
 
 
 def run_experiment(
-    run_config, entity, project, train_dataset, val_dataset, criterion,  device="cuda", log_interval=100
+    model_name,
+    run_config,
+    entity,
+    project,
+    train_dataset,
+    val_dataset,
+    criterion,
+    device="cuda",
+    log_interval=100,
 ):
+    tag = run_config.pop(tag, "")
     # Start wandb run
     with wandb.init(
         entity=entity,
         project=project,
         config=run_config,
-        group=model_name + "_" +run_config["tag"],
+        group=f"{model_name}_{tag}",
         job_type=None,
     ):
         # Initialize model
@@ -299,9 +313,24 @@ if __name__ == "__main__":
         "--scale", action="store_true", help="Scale variables before augmentation"
     )
     parser.add_argument(
-        "--optim", type=str, choices=
-        ["adam", "adamw", "sgd", "adadelta", "adagrad", "adamax", "radam", "nadam", "adabelief", "adabound", "ranger", "lookahead", "shampoo"]
-        , default="adam"
+        "--optim",
+        type=str,
+        choices=[
+            "adam",
+            "adamw",
+            "sgd",
+            "adadelta",
+            "adagrad",
+            "adamax",
+            "radam",
+            "nadam",
+            "adabelief",
+            "adabound",
+            "ranger",
+            "lookahead",
+            "shampoo",
+        ],
+        default="adam",
     )
     parser.add_argument(
         "--init_type",
@@ -337,25 +366,25 @@ if __name__ == "__main__":
 
     # Define separate transforms for train and val
     train_augment = transforms.Compose(
-            [
-                # transforms.RandomHorizontalFlip(),
-                # transforms.RandomVerticalFlip(),
-                # transforms.RandomResizedCrop(
-                #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
-                # ),
-                # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
-                # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
-                # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
-                transforms.ToDtype(torch.float, scale=run_config["scale"]),
-            ]
-        )
+        [
+            # transforms.RandomHorizontalFlip(),
+            # transforms.RandomVerticalFlip(),
+            # transforms.RandomResizedCrop(
+            #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
+            # ),
+            # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
+            # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
+            # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
+            transforms.ToDtype(torch.float, scale=run_config["scale"]),
+        ]
+    )
     val_augment = transforms.Compose(
-            [
-                transforms.ToDtype(torch.float, scale=run_config["scale"]),
-            ]
-        )  # TODO: Maybe weak augmentations here too?
+        [
+            transforms.ToDtype(torch.float, scale=run_config["scale"]),
+        ]
+    )  # TODO: Maybe weak augmentations here too?
 
-        # Initialize train and validation datasets
+    # Initialize train and validation datasets
     train_dataset = WrapperDataset(train_dataset, transform=train_augment)
     val_dataset = WrapperDataset(val_dataset, transform=val_augment)
 
@@ -368,6 +397,7 @@ if __name__ == "__main__":
     for model_name in models:
         print(f"Training model {model_name}")
         val_result, trained_model = run_experiment(
+            model_name,
             run_config,
             entity,
             project,
@@ -379,20 +409,24 @@ if __name__ == "__main__":
         )
         trained_models.append(trained_model)
         model_names.append(model_name)
-    
+
     if len(trained_models) > 1:
-        group_name = '|'.join(model_names)
+        group_name = "|".join(model_names)
         print(f"Evaluating ensemble model {group_name}")
-        ensemble_model = EnsembleModel(trained_models)  
+        ensemble_model = EnsembleModel(trained_models)
         with wandb.init(
-        entity=entity,
-        project=project,
-        config=run_config,
-        group=group_name,
-        job_type=None,
-    ):
+            entity=entity,
+            project=project,
+            config=run_config,
+            group=group_name,
+            job_type=None,
+        ):
             val_metrics = evaluate(
-                ensemble_model, val_dataset, criterion, batch_size=run_config["batchsize"], device=device
+                ensemble_model,
+                val_dataset,
+                criterion,
+                batch_size=run_config["batchsize"],
+                device=device,
             )
 
             # Log in wandb
@@ -421,15 +455,14 @@ if __name__ == "__main__":
                 {
                     "val/roc": wandb.plot.roc_curve(
                         val_metrics["ground_truth"],
-                        torch.nn.functional.softmax(
-                            val_metrics["logits"], dim=-1
-                        ),
+                        torch.nn.functional.softmax(val_metrics["logits"], dim=-1),
                         labels=CLASSES,
                     )
                 }
             )
 
-                # Save best model so far in disk
+            # Save best model so far in disk
             torch.save(
-                ensemble_model.state_dict(), os.path.join(wandb.run.dir, "best_model.pt")
+                ensemble_model.state_dict(),
+                os.path.join(wandb.run.dir, "best_model.pt"),
             )
