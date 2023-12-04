@@ -222,6 +222,7 @@ def run_experiment(
     criterion,
     device="cuda",
     log_interval=100,
+    seed=None,
 ):
     # Reset random seed before starting training
     if seed:
