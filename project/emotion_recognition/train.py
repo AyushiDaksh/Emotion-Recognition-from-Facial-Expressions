@@ -5,6 +5,7 @@ from torch.optim import AdamW, Adam, SGD, Adadelta, Adagrad, Adamax, RAdam, NAda
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from logging import warn
+from functools import partial
 import argparse
 import os
 import wandb
@@ -17,7 +18,7 @@ from project.emotion_recognition.dataset import (
 )
 from project.emotion_recognition.constants import *
 from project.emotion_recognition.eval import evaluate
-from project.emotion_recognition.utils import get_model, set_seed, apply_initialization
+from project.emotion_recognition.utils import get_model, set_seed, initialize_weights
 
 # from eval import evaluate
 
@@ -257,7 +258,9 @@ def run_experiment(
 
         # Initialize model
         model = get_model(model_name).to(device)
-        apply_initialization(model, run_config["init_type"])
+
+        # Initialize weights
+        model.apply(partial(initialize_weights, run_config["init_type"]))
 
         # Initialize optimizer
         if run_config["optim"] == "adam":
@@ -321,15 +324,26 @@ if __name__ == "__main__":
         "--scale", action="store_true", help="Scale variables before augmentation"
     )
     parser.add_argument(
-        "--optim", type=str, choices=
-        ["adam", "adamw", "sgd", "adadelta", "adagrad", "adamax", "radam", "nadam"]
-        , default="adam"
+        "--optim",
+        type=str,
+        choices=[
+            "adam",
+            "adamw",
+            "sgd",
+            "adadelta",
+            "adagrad",
+            "adamax",
+            "radam",
+            "nadam",
+        ],
+        default="adam",
     )
     parser.add_argument(
-        "--init_type", type=str, choices=[
-            "uniform", "normal", "xavier_uniform", "xavier_normal"
-        ], default="uniform"
-    )   
+        "--init_type",
+        type=str,
+        choices=["uniform", "normal", "xavier_uniform", "xavier_normal"],
+        default="uniform",
+    )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
