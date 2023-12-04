@@ -112,7 +112,7 @@ def train(
     # Alert wandb to log this training
     wandb.watch(model, criterion, log="all", log_freq=log_interval)
 
-    best_val_metrics = dict(auroc=0.0)
+    best_val_metrics = dict(top1_f1=0.0)
     batch_num = 0
     for epoch in range(1, epochs + 1):
         for batch_data in tqdm(train_loader, desc=f"Epoch {epoch}"):
@@ -155,7 +155,7 @@ def train(
                 wandb.log(log_dict, step=batch_num)
 
                 # Update best val auroc
-                if val_metrics["auroc"] > best_val_metrics["auroc"]:
+                if val_metrics["top1_f1"] > best_val_metrics["top1_f1"]:
                     wandb.run.summary["best_val_auroc"] = val_metrics["auroc"]
                     wandb.run.summary["best_top1_precision"] = val_metrics[
                         "top1_precision"
@@ -231,16 +231,14 @@ def run_experiment(
         # Define separate transforms for train and val
         train_augment = transforms.Compose(
             [
-                transforms.RandomHorizontalFlip(),
+                # transforms.RandomHorizontalFlip(),
                 # transforms.RandomVerticalFlip(),
-                # transforms.ColorJitter(brightness=0.2, contrast=0.1),
                 # transforms.RandomResizedCrop(
-                #    IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
+                #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
                 # ),
-                # transforms.RandomAdjustSharpness(sharpness_factor=0.25, p=0.2),
-                # transforms.RandomAffine(degrees=45, translate=(0.2, 0.2)),
-                # transforms.GaussianBlur(kernel_size=(3, 3), sigma=(0.1, 5.)),
-                # transforms.RandomPerspective(distortion_scale=0.25, p=0.5),
+                # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
+                # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
+                # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
                 transforms.ToDtype(torch.float, scale=run_config["scale"]),
             ]
         )
