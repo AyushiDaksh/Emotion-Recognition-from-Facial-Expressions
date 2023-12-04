@@ -278,42 +278,16 @@ def run_experiment(
         elif run_config["optim"] == "radam":
             optimizer = RAdam(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "adabelief":
-            optimizer = AdaBelief(model.parameters(), lr=run_config["lr"])
+            optimizer = AdaBelief(model.parameters())
         elif run_config["optim"] == "adabound":
-            optimizer = AdaBound(
-                model.parameters(),
-                lr= 1e-3,
-                betas= (0.9, 0.999),
-                final_lr = 0.1,
-                gamma=1e-3,
-                eps= 1e-8,
-                weight_decay=0,
-                amsbound=False,
-            )
-
+            optimizer = AdaBound(model.parameters())
         elif run_config["optim"] == "ranger":
-            optimizer = optim.Ranger(
-                model.parameters(),
-                lr=run_config["lr"],
-                alpha=0.5,
-                k=6,
-                N_sma_threshhold=5,
-                betas=(.95, 0.999),
-                eps=1e-5,
-                weight_decay=0
-            )
+            optimizer = Ranger(model.parameters())
         elif run_config["optim"] == "lookahead":
             adam = Adam(model.parameters(), lr=run_config["lr"])
             optimizer = Lookahead(adam, k=5, alpha=0.5)
         elif run_config["optim"] == "shampoo":
-            optimizer = Shampoo(
-                model.parameters(),
-                lr=1e-1,
-                momentum=0.0,
-                weight_decay=0.0,
-                epsilon=1e-4,
-                update_freq=1,
-            )
+            optimizer = Shampoo(model.parameters())
         else:
             raise NotImplementedError
 
