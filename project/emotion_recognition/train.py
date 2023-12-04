@@ -234,7 +234,7 @@ def run_experiment(
         entity=entity,
         project=project,
         config=run_config,
-        group=f"{model_name}_{tag}",
+        group=model_name if tag == "" else f"{model_name}_{tag}",
         job_type=None,
     ):
         # Initialize model
