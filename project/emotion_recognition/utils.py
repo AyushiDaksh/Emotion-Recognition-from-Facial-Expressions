@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn 
 import random
 import numpy as np
 from logging import warn
@@ -64,6 +65,33 @@ def get_model(model_name):
         raise ValueError("Unsupported model name")
 
     return model
+
+def apply_initialization(model, init_type):
+    for module in model.modules():
+        if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+            if init_type == 'uniform':
+                nn.init.uniform_(module.weight)
+            elif init_type == 'normal':
+                nn.init.normal_(module.weight)
+            elif init_type == 'constant':
+                nn.init.constant_(module.weight, 0.5)  # You can change the constant value
+            elif init_type == 'ones':
+                nn.init.ones_(module.weight)
+            elif init_type == 'zeros':
+                nn.init.zeros_(module.weight)
+            elif init_type == 'xavier_uniform':
+                nn.init.xavier_uniform_(module.weight)
+            elif init_type == 'xavier_normal':
+                nn.init.xavier_normal_(module.weight)
+            elif init_type == 'kaiming_uniform':
+                nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+            elif init_type == 'kaiming_normal':
+                nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
+            elif init_type == 'orthogonal':
+                nn.init.orthogonal_(module.weight)
+
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
 
 
 class EnsembleModel:

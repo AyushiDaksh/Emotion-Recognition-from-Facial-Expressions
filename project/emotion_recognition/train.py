@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import v2 as transforms
-from torch.optim import AdamW, Adam, SGD
+from torch.optim import AdamW, Adam, SGD, Adadelta, Adagrad, Adamax, RAdam, NAdam
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from logging import warn
@@ -265,6 +265,16 @@ def run_experiment(
             optimizer = AdamW(model.parameters(), lr=run_config["lr"])
         elif run_config["optim"] == "sgd":
             optimizer = SGD(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adadelta":
+            optimizer = torch.optim.Adadelta(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adagrad":
+            optimizer = torch.optim.Adagrad(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "adamax":
+            optimizer = torch.optim.Adamx(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "nadam":
+            optimizer = torch.optim.NAdam(model.parameters(), lr=run_config["lr"])
+        elif run_config["optim"] == "radam":
+            optimizer = torch.optim.RAdam(model.parameters(), lr=run_config["lr"])
         else:
             raise NotImplementedError
 
@@ -310,7 +320,9 @@ if __name__ == "__main__":
         "--scale", action="store_true", help="Scale variables before augmentation"
     )
     parser.add_argument(
-        "--optim", type=str, choices=["adam", "adamw", "sgd"], default="adam"
+        "--optim", type=str, choices=
+        ["adam", "adamw", "sgd", "adadelta", "adagrad", "adamax", "radam", "nadam"]
+        , default="adam"
     )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
