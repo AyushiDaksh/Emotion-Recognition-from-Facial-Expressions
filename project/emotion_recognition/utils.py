@@ -92,13 +92,15 @@ def initialize_weights(init_type, layer):
             nn.init.zeros_(layer.bias)
 
 
-class EnsembleModel:
-    def __init__(self, model_names):
-        self.models = [get_model(name) for name in model_names]
+class EnsembleModel(torch.nn.Module):
+    def __init__(self, models):
+        super(EnsembleModel, self).__init__()
+        self.models = models
+        for model in self.models:
+            model.eval()
 
     def forward(self, x):
-        # Get predictions from all models
-        preds = [model(x) for model in self.models]
-        # Combine predictions. Here we are simply averaging them
-        ensemble_pred = torch.mean(torch.stack(preds), dim=0)
-        return ensemble_pred
+        # Average the outputs of the models
+        outputs = [model(x) for model in self.models]
+        avg_output = torch.mean(torch.stack(outputs), dim=0)
+        return avg_output

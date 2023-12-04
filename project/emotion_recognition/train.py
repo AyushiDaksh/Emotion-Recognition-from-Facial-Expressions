@@ -19,7 +19,7 @@ from project.emotion_recognition.dataset import (
 )
 from project.emotion_recognition.constants import *
 from project.emotion_recognition.eval import evaluate
-from project.emotion_recognition.utils import get_model, set_seed, initialize_weights
+from project.emotion_recognition.utils import get_model, set_seed, initialize_weights, EnsembleModel
 
 # from eval import evaluate
 
@@ -204,11 +204,11 @@ def train(
     # Sync best model to wandb
     wandb.save(os.path.join(wandb.run.dir, f"best_model.pt"))
 
-    return best_val_metrics
+    return best_val_metrics, model
 
 
 def run_experiment(
-    run_config, entity, project, root, seed, device="cuda", log_interval=100
+    run_config, entity, project, train_dataset, val_dataset, criterion,  device="cuda", log_interval=100
 ):
     # Start wandb run
     with wandb.init(
@@ -218,45 +218,6 @@ def run_experiment(
         group=model_name,
         job_type=None,
     ):
-        # Set random seed
-        if seed:
-            set_seed(seed)
-
-        # Initialize train dataset with the common transforms
-        dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
-
-        # 85%-15% Train-validation split
-        train_size = int(len(dataset) * 0.85)
-        val_size = len(dataset) - train_size
-        train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-
-        # Define separate transforms for train and val
-        train_augment = transforms.Compose(
-            [
-                # transforms.RandomHorizontalFlip(),
-                # transforms.RandomVerticalFlip(),
-                # transforms.RandomResizedCrop(
-                #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
-                # ),
-                # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
-                # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
-                # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
-                transforms.ToDtype(torch.float, scale=run_config["scale"]),
-            ]
-        )
-        val_augment = transforms.Compose(
-            [
-                transforms.ToDtype(torch.float, scale=run_config["scale"]),
-            ]
-        )  # TODO: Maybe weak augmentations here too?
-
-        # Initialize train and validation datasets
-        train_dataset = WrapperDataset(train_dataset, transform=train_augment)
-        val_dataset = WrapperDataset(val_dataset, transform=val_augment)
-
-        # Loss function
-        criterion = CrossEntropyLoss()
-
         # Initialize model
         model = get_model(model_name).to(device)
 
@@ -295,7 +256,7 @@ def run_experiment(
             raise NotImplementedError
 
         # Train the model and get the best validation metrics
-        best_val_metrics = train(
+        best_val_metrics, model = train(
             model,
             train_dataset,
             val_dataset,
@@ -306,7 +267,8 @@ def run_experiment(
             device,
             log_interval,
         )
-    return best_val_metrics
+
+    return best_val_metrics, model
 
 
 if __name__ == "__main__":
@@ -360,15 +322,112 @@ if __name__ == "__main__":
     device = run_config.pop("device")
     log_interval = run_config.pop("log_interval")
 
+    # Set random seed
+    if seed:
+        set_seed(seed)
+
+    # Initialize train dataset with the common transforms
+    dataset = FER2013(root=root, split="train", transform=COMMON_TRANSFORMS)
+
+    # 85%-15% Train-validation split
+    train_size = int(len(dataset) * 0.85)
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+    # Define separate transforms for train and val
+    train_augment = transforms.Compose(
+            [
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomVerticalFlip(),
+                # transforms.RandomResizedCrop(
+                #     IMG_SIZE, scale=(0.9, 1), ratio=(1, 4 / 3), antialias=True
+                # ),
+                # transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
+                # transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
+                # transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
+                transforms.ToDtype(torch.float, scale=run_config["scale"]),
+            ]
+        )
+    val_augment = transforms.Compose(
+            [
+                transforms.ToDtype(torch.float, scale=run_config["scale"]),
+            ]
+        )  # TODO: Maybe weak augmentations here too?
+
+        # Initialize train and validation datasets
+    train_dataset = WrapperDataset(train_dataset, transform=train_augment)
+    val_dataset = WrapperDataset(val_dataset, transform=val_augment)
+
+    # Loss function
+    criterion = CrossEntropyLoss()
+
     models = run_config.pop("models")
+    trained_models = []
+    model_names = []
     for model_name in models:
         print(f"Training model {model_name}")
-        val_result = run_experiment(
+        val_result, trained_model = run_experiment(
             run_config,
             entity,
             project,
-            root,
-            seed=seed,
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            criterion=criterion,
             device=device,
             log_interval=log_interval,
         )
+        trained_models.append(trained_model)
+        model_names.append(model_name)
+    
+    if len(trained_model) > 1:
+        group_name = '|'.join(model_names)
+        ensemble_model = EnsembleModel(trained_models)  
+        with wandb.init(
+        entity=entity,
+        project=project,
+        config=run_config,
+        group=group_name,
+        job_type=None,
+    ):
+            val_metrics = evaluate(
+                ensemble_model, val_dataset, criterion, batch_size=batch_size, device=device
+            )
+
+            # Log in wandb
+            log_dict = {
+                "epoch": run_config["epochs"],
+                "val/loss": val_metrics["loss"],
+                "val/top1_precision": val_metrics["top1_precision"],
+                "val/top2_precision": val_metrics["top2_precision"],
+                "val/top1_recall": val_metrics["top1_recall"],
+                "val/top2_recall": val_metrics["top2_recall"],
+                "val/top1_f1": val_metrics["top1_f1"],
+                "val/top2_f1": val_metrics["top2_f1"],
+                "val/top1_accuracy": val_metrics["top1_accuracy"],
+                "val/top2_accuracy": val_metrics["top2_accuracy"],
+                "val/auroc": val_metrics["auroc"],
+            }
+            # Classwise validation AUROC
+            for cls_name in CLASSES:
+                log_dict[f"val/{cls_name}_auroc"] = val_metrics[f"{cls_name}_auroc"]
+
+            # Log val metrics in wandb
+            wandb.log(log_dict)
+
+            # Log ROC curve for validation data
+            wandb.log(
+                {
+                    "val/roc": wandb.plot.roc_curve(
+                        val_metrics["ground_truth"],
+                        torch.nn.functional.softmax(
+                            val_metrics["logits"], dim=-1
+                        ),
+                        labels=CLASSES,
+                    )
+                }
+            )
+
+                # Save best model so far in disk
+            torch.save(
+                ensemble_model.state_dict(), os.path.join(wandb.run.dir, "best_model.pt")
+            )
