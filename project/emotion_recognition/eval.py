@@ -25,7 +25,7 @@ from project.emotion_recognition.dataset import (
     WrapperDataset,
 )
 from project.emotion_recognition.constants import *
-from project.emotion_recognition.utils import get_model
+from project.emotion_recognition.utils import get_model, focal_loss
 
 from wandb import Api
 
@@ -155,7 +155,12 @@ if __name__ == "__main__":
         )
 
         # Loss function
-        criterion = CrossEntropyLoss()
+        if wandb_r.config["loss"] == "cce":
+            criterion = CrossEntropyLoss()
+        elif wandb_r.config["loss"] == "focal":
+            criterion = focal_loss
+        else:
+            raise ValueError("Invalid loss function passed")
 
         # Evaluate model on test data and get metrics
         metrics = evaluate(

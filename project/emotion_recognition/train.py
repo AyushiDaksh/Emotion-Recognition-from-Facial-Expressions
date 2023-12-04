@@ -23,6 +23,7 @@ from project.emotion_recognition.utils import (
     get_model,
     set_seed,
     initialize_weights,
+    focal_loss,
     EnsembleModel,
 )
 
@@ -318,6 +319,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scale", action="store_true", help="Scale variables before augmentation"
     )
+    parser.add_argument("--loss", choices=["cce", "focal"], default="cce")
     parser.add_argument(
         "--optim",
         type=str,
@@ -392,7 +394,12 @@ if __name__ == "__main__":
     val_dataset = WrapperDataset(val_dataset, transform=val_augment)
 
     # Loss function
-    criterion = CrossEntropyLoss()
+    if run_config["loss"] == "cce":
+        criterion = CrossEntropyLoss()
+    elif run_config["loss"] == "focal":
+        criterion = focal_loss
+    else:
+        raise ValueError("Invalid loss function passed")
 
     models = run_config.pop("models")
     trained_models = []

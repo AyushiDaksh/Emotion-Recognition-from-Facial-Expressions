@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torchvision.ops import sigmoid_focal_loss
 import random
 import numpy as np
 from logging import warn
@@ -52,7 +53,7 @@ def get_model(model_name):
             1, 24, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False
         )
 
-    elif  "squeezenet" in model_name:
+    elif "squeezenet" in model_name:
         model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2))
 
     elif "wide_resnet" in model_name:
@@ -104,3 +105,12 @@ class EnsembleModel(torch.nn.Module):
         outputs = [model(x) for model in self.models]
         avg_output = torch.mean(torch.stack(outputs), dim=0)
         return avg_output
+
+
+def focal_loss(
+    input, target, num_classes=len(CLASSES), alpha=0.25, gamma=2, reduction="mean"
+):
+    target_one_hot = nn.functional.one_hot(target, num_classes=num_classes).float()
+    return sigmoid_focal_loss(
+        input, target_one_hot, alpha=alpha, gamma=gamma, reduction=reduction
+    )
