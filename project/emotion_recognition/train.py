@@ -379,8 +379,9 @@ if __name__ == "__main__":
         trained_models.append(trained_model)
         model_names.append(model_name)
     
-    if len(trained_model) > 1:
+    if len(trained_models) > 1:
         group_name = '|'.join(model_names)
+        print(f"Evaluating ensemble model {group_name}")
         ensemble_model = EnsembleModel(trained_models)  
         with wandb.init(
         entity=entity,
@@ -390,7 +391,7 @@ if __name__ == "__main__":
         job_type=None,
     ):
             val_metrics = evaluate(
-                ensemble_model, val_dataset, criterion, batch_size=batch_size, device=device
+                ensemble_model, val_dataset, criterion, batch_size=run_config["batchsize"], device=device
             )
 
             # Log in wandb
