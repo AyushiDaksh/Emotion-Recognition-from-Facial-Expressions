@@ -315,6 +315,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int)
     parser.add_argument("--device", choices=["cpu", "cuda", "mps"], default="cuda")
 
+    # Augmentations
+    parser.add_argument("--distortion", type=float, default=0.15)
+
     # Common hyperparameters
     parser.add_argument(
         "--scale", action="store_true", help="Scale variables before augmentation"
@@ -349,7 +352,6 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--batchsize", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--dropout", type=float, default=0.4)
 
     # Parse the args and remove the non-hyperparameter keys
     run_config = vars(parser.parse_args())
@@ -379,7 +381,9 @@ if __name__ == "__main__":
             transforms.RandomVerticalFlip(),
             transforms.RandomAdjustSharpness(sharpness_factor=0.15, p=0.2),
             transforms.RandomAffine(degrees=45, translate=(0.1, 0.1)),
-            transforms.RandomPerspective(distortion_scale=0.15, p=0.5),
+            transforms.RandomPerspective(
+                distortion_scale=run_config["distortion"], p=0.5
+            ),
             transforms.ToDtype(torch.float, scale=run_config["scale"]),
         ]
     )
