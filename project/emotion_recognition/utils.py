@@ -26,38 +26,38 @@ def get_model(model_name):
         # Change the model to accept single channel images
         model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=3, padding=1)
 
-    elif model_name == "convnext_tiny":
+    elif "convnext" in model_name:
         model.features[0][0] = torch.nn.Conv2d(1, 96, kernel_size=(4, 4), stride=(4, 4))
 
-    elif model_name == "efficientnet_b7":
+    elif "efficientnet_b7" in model_name:
         model.features[0][0] = torch.nn.Conv2d(
             1, 64, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False
         )
 
-    elif model_name == "efficientnet_v2_s":
+    elif "efficientnet_v2" in model_name:
         model.features[0][0] = torch.nn.Conv2d(
             1, 24, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False
         )
 
-    elif model_name == "mobilenet_v3_small":
+    elif "mobilenet" in model_name:
         model.features[0][0] = torch.nn.Conv2d(
             1, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False
         )
 
-    elif model_name == "resnext50_32x4d":
+    elif "resnext50" in model_name:
         model.conv1 = torch.nn.Conv2d(
             1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
         )
 
-    elif model_name == "shufflenet_v2_x0_5":
+    elif "shufflenet" in model_name:
         model.conv1[0] = torch.nn.Conv2d(
             1, 24, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False
         )
 
-    elif model_name == "squeezenet1_1":
+    elif  "squeezenet" in model_name:
         model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(2, 2))
 
-    elif model_name == "wide_resnet50_2":
+    elif "wide_resnet" in model_name:
         model.conv1 = torch.nn.Conv2d(
             1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
         )
