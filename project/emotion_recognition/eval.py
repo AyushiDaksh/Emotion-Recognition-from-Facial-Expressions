@@ -137,7 +137,10 @@ if __name__ == "__main__":
         device = run_config.device
 
         model_name = api.run(wandb_r.path).group
-        model = get_model(model_name)
+        if "|" in model_name:
+            model = EnsembleModel([get_model(mdl) for mdl in model_name.split("|")])
+        else:
+            model = get_model(model_name)
 
         # Fetch weights from wandb train run
         weights_file = wandb.restore("best_model.pt")
