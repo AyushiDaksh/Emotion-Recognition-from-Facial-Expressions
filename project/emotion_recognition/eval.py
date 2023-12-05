@@ -143,6 +143,8 @@ if __name__ == "__main__":
         weights_file = wandb.restore("best_model.pt")
         model.load_state_dict(torch.load(os.path.join(wandb_r.dir, "best_model.pt")))
 
+        model = model.to(device)
+
         # Initialize test dataset with the common transforms
         test_augment = transforms.Compose(
             [
