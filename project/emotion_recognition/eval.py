@@ -25,7 +25,7 @@ from project.emotion_recognition.dataset import (
     WrapperDataset,
 )
 from project.emotion_recognition.constants import *
-from project.emotion_recognition.utils import get_model, focal_loss
+from project.emotion_recognition.utils import get_model, focal_loss, EnsembleModel
 
 from wandb import Api
 
