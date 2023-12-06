@@ -144,7 +144,12 @@ if __name__ == "__main__":
 
         # Fetch weights from wandb train run
         weights_file = wandb.restore("best_model.pt")
-        model.load_state_dict(torch.load(os.path.join(wandb_r.dir, "best_model.pt")))
+        model.load_state_dict(
+            torch.load(
+                os.path.join(wandb_r.dir, "best_model.pt"),
+                map_location=torch.device(device),
+            )
+        )
 
         model = model.to(device)
 
