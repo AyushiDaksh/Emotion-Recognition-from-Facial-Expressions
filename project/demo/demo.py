@@ -11,7 +11,7 @@ import sys
 
 from project.emotion_recognition.constants import CLASSES
 from project.emotion_recognition.dataset import COMMON_TRANSFORMS
-from project.emotion_recognition.utils import get_model
+from project.emotion_recognition.utils import get_model, EnsembleModel
 
 
 def get_resource_usage():
@@ -22,18 +22,28 @@ def get_resource_usage():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="resnet18")
+    parser.add_argument(
+        "--models", nargs="+", default=["resnet18", "resnet34", "vgg13_bn", "vgg19_bn"]
+    )
     parser.add_argument(
         "--weights",
-        type=str,
-        default="./project/demo/best_emotion_model.pt",
-        help="Path to the weights file",
+        nargs="+",
+        default=[
+            "./project/demo/best_weights/resnet18.pt",
+            "./project/demo/best_weights/resnet34.pt",
+            "./project/demo/best_weights/vgg13_bn.pt",
+            "./project/demo/best_weights/vgg19_bn.pt",
+        ],
+        help="Paths to the weights file",
     )
+    parser.add_argument("--device", type=str, default="cpu")
 
     parser.add_argument("--detection_interval", type=int, default=1)
     parser.add_argument("--recognition_interval", type=int, default=1)
 
     args = parser.parse_args()
+
+    device = args.device
 
     # Initialize the webcam
     cap = cv2.VideoCapture(0)
@@ -51,9 +61,28 @@ if __name__ == "__main__":
     prev_frame_time = 0
     frame_count = 0
 
+    if len(args.models) != len(args.weights):
+        raise ValueError(
+            "Number of models passed should be the same as the number of weights"
+        )
+
     # Load model weights and switch on eval mode
-    model = get_model(args.model_name)
-    model.load_state_dict(torch.load(args.weights))
+    if len(args.models) > 1:
+        models = []
+        for model_name, weights in zip(args.models, args.weights):
+            model = get_model(model_name)
+            model.load_state_dict(
+                torch.load(weights, map_location=torch.device(device)),
+            )
+            model.eval()
+            models.append(model)
+
+        model = EnsembleModel(models)
+    else:
+        model = get_model(args.model_name)
+        model.load_state_dict(
+            torch.load(args.weights[0], map_location=torch.device(device))
+        )
     model.eval()
     torch.set_grad_enabled(False)
 

@@ -25,7 +25,7 @@ from project.emotion_recognition.dataset import (
     WrapperDataset,
 )
 from project.emotion_recognition.constants import *
-from project.emotion_recognition.utils import get_model
+from project.emotion_recognition.utils import get_model, focal_loss, EnsembleModel
 
 from wandb import Api
 
@@ -137,11 +137,21 @@ if __name__ == "__main__":
         device = run_config.device
 
         model_name = api.run(wandb_r.path).group
-        model = get_model(model_name)
+        if "|" in model_name:
+            model = EnsembleModel([get_model(mdl) for mdl in model_name.split("|")])
+        else:
+            model = get_model(model_name)
 
         # Fetch weights from wandb train run
         weights_file = wandb.restore("best_model.pt")
-        model.load_state_dict(torch.load(os.path.join(wandb_r.dir, "best_model.pt")))
+        model.load_state_dict(
+            torch.load(
+                os.path.join(wandb_r.dir, "best_model.pt"),
+                map_location=torch.device(device),
+            )
+        )
+
+        model = model.to(device)
 
         # Initialize test dataset with the common transforms
         test_augment = transforms.Compose(
@@ -155,7 +165,12 @@ if __name__ == "__main__":
         )
 
         # Loss function
-        criterion = CrossEntropyLoss()
+        if wandb_r.config["loss"] == "cce":
+            criterion = CrossEntropyLoss()
+        elif wandb_r.config["loss"] == "focal":
+            criterion = focal_loss
+        else:
+            raise ValueError("Invalid loss function passed")
 
         # Evaluate model on test data and get metrics
         metrics = evaluate(
