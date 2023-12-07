@@ -99,20 +99,19 @@ if __name__ == "__main__":
                         # Add an extra batch dimension since models expect batches
                         face = face.unsqueeze(0)
                         try:
-                            # inference function
                             with torch.no_grad():
-                                output = torch.nn.functional.softmax(
-                                    model(face), dim=-1
-                                )
-                                output = torch.argmax(output, dim=-1)
-                            emotion = CLASSES[output.item()]
+                                output = torch.nn.functional.softmax(model(face), dim=-1)
+                                probability, predicted_class = torch.max(output, 1)
+                                emotion = CLASSES[predicted_class.item()]
+                                confidence = probability.item() * 100  # Convert to percentage
                         except Exception as error:
                             print("An exception occurred", error)
                             emotion = "Detection Failed"
+                            confidence = 0
                         # Put emotion text above the rectangle
                         cv2.putText(
                             frame,
-                            emotion,
+                            f"{emotion} ({confidence:.2f}%)",
                             (x, y - 10),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.9,
